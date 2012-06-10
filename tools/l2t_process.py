@@ -53,7 +53,7 @@ L2T_RE = re.compile(('^date,time,timezone,MACB,source,sourcetype,type,user,host,
 L2T_TIME = re.compile("""^(?P<date>\d{2}\/\d{2}\/\d{2}),(?P<time>\d{2}:\d{2}\d{2}),""", re.X)
 
 
-def ExternalSplit(sortfile, temp_name, buffer_size=0):
+def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
   """External sorting algorithm.
 
   This is an implementation of an external sorting algorithm that splits up
@@ -63,6 +63,7 @@ def ExternalSplit(sortfile, temp_name, buffer_size=0):
   Args:
     sortfile: The filehandle to the original bodyfile that needs to be sorted.
     temp_name: Name of the temporary output file used to store sorted portions.
+    dfilters: A list (2 entries) with datefilters, integers.
     buffer_size: The size of the buffer used for sorting (if zero all file is
     loaded in memory).
   """
@@ -72,11 +73,12 @@ def ExternalSplit(sortfile, temp_name, buffer_size=0):
   logging.debug('Buffer size: %d', buffer_size)
   temp_buffer = []
   for line in sortfile.readlines():
+    # should be YYYYMMDDHHMMSS
     date_and_time_str = '%s%s%s%s%s%s' % (line[6:10], line[0:2], line[3:5],
                                           line[11:13], line[14:16], line[17:19])
     date_and_time = int(date_and_time_str)
     a_list = (date_and_time, line)
-    if not FilterOut(a_list):
+    if not FilterOut(a_list, dfilters):
       temp_buffer.append(a_list)
 
     check_size += len(line)
@@ -105,7 +107,21 @@ def FlushBuffer(buf, count, temp):
 
   fh.close()
 
-def FilterOut(test):
+def FilterOut(test, filters):
+  """Missing docstring..."""
+  if not len(filters) == 2:
+    return False
+
+  if not filters[0]:
+    return False
+
+  if filters[1]:
+    if test[0] > filters[1]:
+      return True
+
+  if test[0] < filters[0]:
+    return True
+
   return False
 
 def ExternalMergeSort(in_file_str, out_file):
@@ -214,20 +230,20 @@ if __name__ == '__main__':
   date_filter_low = None
   date_filter_high = None
   if len(args) == 1:
-    date_regex = re.compile('^(\d{1,2})-(\d{1,2})-(\d{4})$')
+    date_regex = re.compile('^(\d{1,2})\-(\d{1,2})\-(\d{4})$')
     daterange_regex = re.compile('^(\d{1,2})\-(\d{1,2})\-(\d{4})\.\.(\d{1,2})\-(\d{1,2})\-(\d{4})$')
 
     m_date = date_regex.match(args[0])
 
     if m_date:
-      date_filter_low = int(''.join(args[0].split('-')))
+      date_filter_low = int('%04d%02d%02d000000' % (int(m_date.group(3)), int(m_date.group(1)), int(m_date.group(2))))
     else:
       m_range = daterange_regex.match(args[0])
       if m_range:
         filters = args[0].split('..')
         date_filter_low = int(''.join(filters[0].split('-')))
-        date_filter_low = int('%04d%02d%02d' % (int(m_range.group(3)), int(m_range.group(1)), int(m_range.group(2))))
-        date_filter_high = int('%04d%02d%02d' % (int(m_range.group(6)), int(m_range.group(4)), int(m_range.group(5))))
+        date_filter_low = int('%04d%02d%02d000000' % (int(m_range.group(3)), int(m_range.group(1)), int(m_range.group(2))))
+        date_filter_high = int('%04d%02d%02d235959' % (int(m_range.group(6)), int(m_range.group(4)), int(m_range.group(5))))
 
   if date_filter_low:
     print 'FILTER: %d' % date_filter_low
@@ -249,7 +265,7 @@ if __name__ == '__main__':
     temp_output_name = 'l2t_sort_temp_%05d' % random.randint(1,10000)
     logging.debug('[l2t_process] Using <%s> as base name for temporary output files.', temp_output_name)
 
-    ExternalSplit(f, temp_output_name, buffer_use_size)
+    ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high), buffer_use_size)
     ExternalMergeSort(temp_output_name, output_file)
 
     # delete temp files
