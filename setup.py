@@ -5,7 +5,7 @@ import os
 
 from distutils.core import setup
 
-FindYaraRules():
+def FindYaraRules():
   for filename in os.walk('data/rules'):
     if '.rules' in filename:
       yield filename
