@@ -22,6 +22,7 @@ setup(name='L2t Tools',
       license='GNU GPL v3',
       url='https://code.google.com/p/l2t-tools',
       package_dir={'l2t_tools': '../l2t-tools'},
-      packages=['l2t_tools'])
+      packages=['l2t_tools',
+                'l2t_tools.lib'])
 
 
