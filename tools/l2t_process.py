@@ -33,10 +33,10 @@ import logging
 import os
 import re
 import sys
-import csv
-import datetime
 import optparse
 import random
+
+from l2t_tools.lib import l2t_sort
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
@@ -50,138 +50,9 @@ BUFFER_SIZE = 1024 * 1024 * 256
 L2T_RE = re.compile(('^date,time,timezone,MACB,source,sourcetype,type,user,host,'
                      'short,desc,version,filename,inode,notes,format,extra$'))
 
-L2T_TIME = re.compile("""^(?P<date>\d{2}\/\d{2}\/\d{2}),(?P<time>\d{2}:\d{2}\d{2}),""", re.X)
-
-
-def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
-  """External sorting algorithm.
-
-  This is an implementation of an external sorting algorithm that splits up
-  the bodyfile into several smaller files, with the size determined by the
-  buffer_size, and then sorts each smaller file.
-
-  Args:
-    sortfile: The filehandle to the original bodyfile that needs to be sorted.
-    temp_name: Name of the temporary output file used to store sorted portions.
-    dfilters: A list (2 entries) with datefilters, integers.
-    buffer_size: The size of the buffer used for sorting (if zero all file is
-    loaded in memory).
-  """
-  counter = 1
-  check_size = 0
-
-  logging.debug('Buffer size: %d', buffer_size)
-  temp_buffer = []
-  for line in sortfile.readlines():
-    # should be YYYYMMDDHHMMSS
-    date_and_time_str = '%s%s%s%s%s%s' % (line[6:10], line[0:2], line[3:5],
-                                          line[11:13], line[14:16], line[17:19])
-    date_and_time = int(date_and_time_str)
-    a_list = (date_and_time, line)
-    if not FilterOut(a_list, dfilters):
-      temp_buffer.append(a_list)
-
-    check_size += len(line)
-    if buffer_size and (check_size >= buffer_size):
-      logging.debug('[ExternalSplit] Flushing, bufsize: %d, and check_size: %d', buffer_size, check_size)
-      FlushBuffer(temp_buffer, counter, temp_name)
-      temp_buffer = []
-      check_size = 0
-      counter += 1
-  logging.debug('[ExternalSplit] Flushing last buffer.')
-  FlushBuffer(temp_buffer, counter, temp_name)
-
-def FlushBuffer(buf, count, temp):
-  """Write a buffer to file.
-  
-  Args:
-    buf: A list containing a tuble with two entries, a date and time merged together and
-    the original line.
-    count: The number of the "flush" file, or the number of times this method is called.
-    temp: The name of the temporary
-  """
-  fh = open('%s.%05d' % (temp, count), 'wb')
-
-  for line in sorted(buf, key=lambda x: x[0]):
-    fh.write('%s,%s' % (line[0], line[1]))
-
-  fh.close()
-
-def FilterOut(test, filters):
-  """A simple method to filter out lines based on their date/content.
-
-  Args:
-    test: A list containing two entries; the date as an int and the whole line.
-    filters: A list containing the date filter (low and high).
-
-  Returns:
-    True if the entry should be filtered out, False otherwise."""
-  if not len(filters) == 2:
-    return False
-
-  if not filters[0]:
-    return False
-
-  if filters[1]:
-    if test[0] > filters[1]:
-      return True
-
-  if test[0] < filters[0]:
-    return True
-
-  return False
-
-def ExternalMergeSort(in_file_str, out_file):
-  """External merge algorithm.
-
-  This is an implementation of a sort-merge algorithm. It takes multiple
-  files that are each sorted and merges them together in a one large file,
-  that is sorted.
-
-  Args:
-    in_file_str: The input file structure.
-    out_file: Filehandle to the output file.
-  """
-  # build a list of all files, 
-  # get the first values from each file
-  # write the lowest value to a file (or stdout)
-  # read new value from that file and continue
-  files = []
-  lines = []
-
-  for fn in GetListOfFiles(in_file_str):
-    files.append(open(fn, 'rb'))
-    line = files[-1].readline()
-    if not line:
-      _ = files.pop()
-    else:
-      lines.append((int(line[0:14]), line[15:]))
-      logging.debug('Appended: %d', int(line[0:14]))
-    
-  logging.debug('[MERGE] FILES <%d> LINES <%d>', len(files), len(lines))
-  while len(files) > 0:
-    lowest = sorted(lines, key=lambda x: x[0])[0]
-    logging.debug('low: %d', lowest[0])
-    i = lines.index(lowest)
-    logging.debug('Found lowest [%d]: <%d> %s = %d', i, lowest[0], lowest[1], lines[i][0])
-    out_file.write('%s' % lowest[1])
-    line = files[i].readline()
-    if line:
-      lines[i] = (int(line[0:14]), lines[15:])
-    else:
-      lines.pop(i)
-      files.pop(i)
-
-  out_file.close()
-
-def GetListOfFiles(in_file_str):
-  path = os.path.dirname(in_file_str) or '.'
-  for fn in os.listdir(path):
-    if in_file_str in fn:
-      yield fn
 
 def IsL2tCsv(filehandle, out):
-  """Read the first line and parse the header."""
+  """Read the first line and parse the header to determine if this is a L2T_CSV file."""
   line = f.readline()
   
   if L2T_RE.match(line):
@@ -195,6 +66,7 @@ if __name__ == '__main__':
 l2t_process.py [OPTIONS] -b CSV_FILE [DATE_RANGE]
 
 Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
+
   option_parser = optparse.OptionParser(usage = usage)
 
   option_parser.add_option('-b', '--file', '--bodyfile', dest='filename',
@@ -207,11 +79,9 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   option_parser.add_option('-d', '--debug', dest='debug',
                            action='store_true', default=False,
                            help='Turn on debug information.')
+
   option_parser.add_option('-t', '--tab', dest='tab', action='store_true',
                            default=False, help='The input file is TAB delimited.')
-
-  option_parser.add_option('--chunk_size', dest='csize', action='store',
-                           default=200, help='The default chunk size for external sorting.')
 
   option_parser.add_option('--output', '-o', dest='output', action='store',
                            metavar='FILE', help='The output file', default='STDOUT')
@@ -230,8 +100,6 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     logging.error('Wrong usage: bodyfile must exist.')
     sys.exit(1)
 
-  # check if bodyfile is smaller than buf_size
-  # then set it to zero.
   if options.output== 'STDOUT':
     output_file = sys.stdout
   else:
@@ -257,34 +125,39 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
         date_filter_high = int('%04d%02d%02d235959' % (int(m_range.group(6)), int(m_range.group(4)), int(m_range.group(5))))
 
   if date_filter_low:
-    print 'FILTER: %d' % date_filter_low
+    logging.debug('[FILTER] Lower date filter: %d', date_filter_low)
   if date_filter_high:
-    print 'FILTER: %d' % date_filter_high
+    logging.debug('[FILTER] Higher date filter: %d', date_filter_high)
 
   with open(options.filename, 'rb') as f:
     if not IsL2tCsv(f, output_file):
       logging.error('This is not a L2t CSV file.')
       sys.exit(2)
-    # do some other stuff.
-    if 'm' in options.buffer_size:
-      bs, _, _ = options.buffer_size.partition('m')
-      buffer_use_size = int(bs) * 1024 * 1024
+
+    if options.buffer_size:
+      if 'm' in options.buffer_size:
+        bs, _, _ = options.buffer_size.partition('m')
+        buffer_use_size = int(bs) * 1024 * 1024
+      else:
+        buffer_use_size = int(options.buffer_size) or BUFFER_SIZE
     else:
-      buffer_use_size = int(options.buffer_size) or BUFFER_SIZE
+      buffer_use_size = BUFFER_SIZE
+
+    # If the size of the original file is smaller then the buf size, adjust it to zero (all file).
+    if os.stat(options.filename).st_size < buffer_use_size:
+      buffer_use_size = 0
 
     logging.debug('[L2t_process] Using buffer size: %d bytes', buffer_use_size)
     temp_output_name = 'l2t_sort_temp_%05d' % random.randint(1,10000)
     logging.debug('[l2t_process] Using <%s> as base name for temporary output files.', temp_output_name)
 
-    ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high), buffer_use_size)
-    ExternalMergeSort(temp_output_name, output_file)
+    l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high), buffer_use_size)
+    l2t_sort.ExternalMergeSort(temp_output_name, output_file)
 
     # delete temp files
-    for name in GetListOfFiles(temp_output_name):
+    for name in l2t_sort.GetListOfFiles(temp_output_name):
       os.remove(name)
 
-#GetOptions(
-#           "y!"          => \$reverse,
 #           "keyword=s"   => \$keyword_file,
 #           "whitelist=s" => \$whitelist_file,
 #           "include!"    => \$include_timestomp,

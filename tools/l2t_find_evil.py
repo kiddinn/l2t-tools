@@ -38,10 +38,10 @@ import sys
 import yara
 
 DEFAULT_RULE_DIR = '/usr/local/yara/rules'
-DEFAULT_RULE = 'simple.rules'
+DEFAULT_RULE = 'all.rules'
 
 
-def ParseTimeLine(filehandle, yara_rules):
+def ParseTimeLine(filehandle, yara_rules, delim=','):
   """Run YARA rules against a l2t_csv timeline.
 
   This function will read the l2t_csv file using the CSV
@@ -51,6 +51,8 @@ def ParseTimeLine(filehandle, yara_rules):
   Args:
     filehandle: A filehandle to the l2t_csv file.
     yara_rules: A full path to the YARA rule file.
+    delim: A string containing the delimitor for the l2t_csv
+    file (can be a comma or a tab for instance).
   """
   try:
     rules = yara.compile(yara_rules)
@@ -60,7 +62,7 @@ def ParseTimeLine(filehandle, yara_rules):
 
   print '[L2T_EVIL_FIND] Loading YARA rules: %s' % yara_rules
 
-  reader = csv.DictReader(filehandle, delimiter=',')
+  reader = csv.DictReader(filehandle, delimiter=delim)
 
   for row in reader:
     hits = rules.match(data='[%s] %s' % (row['format'], row['desc']))
@@ -90,17 +92,24 @@ def ParseTimeLine(filehandle, yara_rules):
               row['desc'])
 
 if __name__ == '__main__':
-  option_parser = optparse.OptionParser()
+  option_parser = optparse.OptionParser(usage=__doc__)
   option_parser.add_option('-f', '--file', '-t', '--timeline', dest='filename',
                            action='store', metavar='FILE',
                            help=('The path to the timeline that is to be'
                                  ' parsed.'))
+  option_parser.add_option('--tab', dest='tabfile', action='store_true',
+                           default=False,
+                           help='This is a tab delimited file, not a CSV one.')
   option_parser.add_option('-r', '--rule', dest='rulefile', action='store',
                            default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
                            metavar='FILE', help=('The path to the YARA'
                                                  ' extended rule file'
                                                  ' to compare against'))
   options, argv = option_parser.parse_args()
+
+  limiter = ','
+  if options.tabfile:
+    limiter = '\t'
 
   if not options.filename:
     option_parser.error('Missing a filename')
@@ -112,5 +121,5 @@ if __name__ == '__main__':
     option_parser.error('Rule file: [%s] does NOT exist.' % options.rulefile)
 
   with open(options.filename, 'rb') as f:
-    ParseTimeLine(f, options.rulefile)
+    ParseTimeLine(f, options.rulefile, limiter)
 
