@@ -49,7 +49,11 @@ def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
     # should be YYYYMMDDHHMMSS
     date_and_time_str = '%s%s%s%s%s%s' % (line[6:10], line[0:2], line[3:5],
                                           line[11:13], line[14:16], line[17:19])
-    date_and_time = int(date_and_time_str)
+    try:
+      date_and_time = int(date_and_time_str)
+    except ValueError as e:
+      logging.debug('[Split] Unable to parse line (%s)', e)
+      continue
     a_list = (date_and_time, line)
     if not FilterOut(a_list, dfilters):
       temp_buffer.append(a_list)
