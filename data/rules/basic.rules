@@ -1,0 +1,13 @@
+private rule MFT_Hit : format
+{
+  meta:
+    description = "Using the MFT module"
+    case_nr = "N/A"
+
+  strings:
+    $mft = "Log2t::input::mft"
+
+  condition:
+    $mft
+}
+

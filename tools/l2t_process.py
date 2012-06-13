@@ -12,16 +12,16 @@ to collecting the supertimeline often results in timeline files in the size rang
 size, which makes loading everything in memory and then sort to be both ineffecient and memory
 consumption blackhole.
 
-Copyright 2009-2012 Kristinn Gudjonsson (kristinn ( a t ) log2timeline (d o t) net)
+Copyright 2012 Kristinn Gudjonsson (kristinn ( a t ) log2timeline (d o t) net)
 
-This file is part of log2timeline.
+This file is part of l2t-tools.
 
-    log2timeline is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
+    l2t-tools is a collection of free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    log2timeline is distributed in the hope that it will be useful,
+    l2t-tools is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
@@ -108,7 +108,14 @@ def FlushBuffer(buf, count, temp):
   fh.close()
 
 def FilterOut(test, filters):
-  """Missing docstring..."""
+  """A simple method to filter out lines based on their date/content.
+
+  Args:
+    test: A list containing two entries; the date as an int and the whole line.
+    filters: A list containing the date filter (low and high).
+
+  Returns:
+    True if the entry should be filtered out, False otherwise."""
   if not len(filters) == 2:
     return False
 
@@ -184,7 +191,11 @@ def IsL2tCsv(filehandle, out):
   return False
 
 if __name__ == '__main__':
-  option_parser = optparse.OptionParser()
+  usage = """
+l2t_process.py [OPTIONS] -b CSV_FILE [DATE_RANGE]
+
+Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
+  option_parser = optparse.OptionParser(usage = usage)
 
   option_parser.add_option('-b', '--file', '--bodyfile', dest='filename',
                            help='The input CSV file.', metavar='FILE')
