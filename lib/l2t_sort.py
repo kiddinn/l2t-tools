@@ -164,7 +164,7 @@ def ExternalMergeSort(in_file_str, out_file):
     last_line = lowest
     line = files[i].readline()
     if line:
-      lines[i] = (int(line[0:14]), lines[15:])
+      lines[i] = (int(line[0:14]), line[15:])
     else:
       lines.pop(i)
       files.pop(i)
