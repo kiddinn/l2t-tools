@@ -37,6 +37,7 @@ import optparse
 import random
 
 from l2t_tools.lib import l2t_sort
+from l2t_tools.plugins import count_system32
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
@@ -49,6 +50,8 @@ BUFFER_SIZE = 1024 * 1024 * 256
 
 L2T_RE = re.compile(('^date,time,timezone,MACB,source,sourcetype,type,user,host,'
                      'short,desc,version,filename,inode,notes,format,extra$'))
+
+LOG_FORMAT = '[%(levelname)s - %(module)s] %(message)s'
 
 
 def IsL2tCsv(filehandle, out):
@@ -86,11 +89,16 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   option_parser.add_option('--output', '-o', dest='output', action='store',
                            metavar='FILE', help='The output file', default='STDOUT')
 
+  option_parser.add_option('--countsystem32', dest='countsystem32', action='store_true',
+                           default=False, help='Test plugin that does nothing of value.')
+
   options, args = option_parser.parse_args()
 
   if options.debug:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
     logging.debug('[l2t_process] Turning debug on.')
+  else:
+    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
   if not options.filename:
     logging.error('[l2t_process] Must provide a filename.')
@@ -100,10 +108,19 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     logging.error('Wrong usage: bodyfile must exist.')
     sys.exit(1)
 
+  if options.tab:
+    separator = '\t'
+  else:
+    separator = ','
+
   if options.output== 'STDOUT':
     output_file = sys.stdout
   else:
     output_file = open(options.output, 'wb')
+
+  plugins = []
+  if options.countsystem32:
+    plugins.append(count_system32.System32Count(separator))
 
   # check date filter
   date_filter_low = None
@@ -151,10 +168,16 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     temp_output_name = 'l2t_sort_temp_%05d' % random.randint(1,10000)
     logging.debug('[l2t_process] Using <%s> as base name for temporary output files.', temp_output_name)
 
-    l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high), buffer_use_size)
-    l2t_sort.ExternalMergeSort(temp_output_name, output_file)
+    try:
+      l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high), buffer_use_size)
+      l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins)
+    except KeyboardInterrupt:
+      logging.warning('Process killed, cleaning up.')
 
-    # delete temp files
+    # Run through the results from the plugins:
+    for plugin in plugins:
+      logging.info('%s', plugin.Report())
+    # Delete temp files
     for name in l2t_sort.GetListOfFiles(temp_output_name):
       os.remove(name)
 

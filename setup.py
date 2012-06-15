@@ -58,7 +58,8 @@ setup(name='L2t Tools',
       package_dir={'l2t_tools': '../l2t-tools'},
       scripts=GetTools(),
       packages=['l2t_tools',
-                'l2t_tools.lib'],
+                'l2t_tools.lib',
+                'l2t_tools.plugins'],
       package_data={'l2t_tools': GetAllYaraRules()},
      )
 

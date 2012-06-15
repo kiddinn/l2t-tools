@@ -108,7 +108,7 @@ def FilterOut(test, filters):
 
   return False
 
-def ExternalMergeSort(in_file_str, out_file):
+def ExternalMergeSort(in_file_str, out_file, plugins):
   """External merge algorithm.
 
   This is an implementation of a sort-merge algorithm. It takes multiple
@@ -126,10 +126,12 @@ def ExternalMergeSort(in_file_str, out_file):
   Args:
     in_file_str: The input file structure.
     out_file: Filehandle to the output file.
+    plugins: A list of plugins to run against the input.
   """
   files = []
   lines = []
   last_line = []
+  count_duplicates = 0
 
   for fn in GetListOfFiles(in_file_str):
     files.append(open(fn, 'rb'))
@@ -147,11 +149,7 @@ def ExternalMergeSort(in_file_str, out_file):
     out_file.write(line[1])
     last_line = line
     for line in files[0]:
-      line_time = line[0:14]
-      line_msg = line[15:]
-      if not IsADuplicate((line_time, line_msg), last_line):
-        out_file.write(line_msg)
-      last_line = line_time, line_msg
+      count_duplicates, last_line = ProcessLine((line[0:14], line[15:]), last_line, out_file, count_duplicates, plugins)
     files.pop()
 
   while len(files) > 0:
@@ -159,9 +157,7 @@ def ExternalMergeSort(in_file_str, out_file):
     logging.debug('low: %d', lowest[0])
     i = lines.index(lowest)
     logging.debug('Found lowest [%d]: <%d> %s = %d', i, lowest[0], lowest[1], lines[i][0])
-    if not IsADuplicate(lowest, last_line):
-      out_file.write('%s' % lowest[1])
-    last_line = lowest
+    count_duplicates, last_line = ProcessLine(lowest, last_line, out_file, count_duplicates, plugins)
     line = files[i].readline()
     if line:
       lines[i] = (int(line[0:14]), line[15:])
@@ -169,7 +165,19 @@ def ExternalMergeSort(in_file_str, out_file):
       lines.pop(i)
       files.pop(i)
 
+  logging.info('Duplicates removed: %d', count_duplicates)
   out_file.close()
+
+def ProcessLine(new_line, last_line, output, duplicates, plugins=[]):
+  """Check if line is a duplicate, run through plugins and return duplicate count and last_line."""
+  if not IsADuplicate(new_line, last_line):
+    output.write('%s' % new_line[1])
+    for plugin in plugins:
+      plugin.AppendLine(new_line)
+  else:
+    duplicates += 1
+
+  return duplicates, new_line
 
 def IsADuplicate(line_a, line_b):
   """Indicate whether or not two lines are duplicates of one another."""

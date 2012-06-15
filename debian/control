@@ -1,0 +1,16 @@
+Source: l2t-tools
+Section: python
+Priority: optional
+Build-Depends: debhelper (>= 7)
+Build-Depends-Indep: python
+Maintainer: Kristinn Gudjonsson <kristinn@log2timeline.net>
+Standards-Version: 3.8.4
+Homepage: http://code.google.com/p/l2t-tools
+
+Package: l2t-tools
+Architecture: all
+Depends: ${python:Depends}
+Recommends: log2timeline
+Description: Tools designed to work with log2timeline's default output.
+ L2t-tools provide few tools used to process the l2t_csv file that is the
+ default output of log2timeline.
