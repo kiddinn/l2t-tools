@@ -74,3 +74,24 @@ class L2tPlugin(object):
       return columns
     
     return None
+
+  def IsInputModules(self, line, modules):
+    """Returns an array of each element if this belongs to any of the modules listed.
+
+    Goes over a list of modules provided and returns a list containing
+    each entry within the log line if any of the modules are used.
+
+    Args:
+      line: A string containing the entire line.
+      modules: A list containing the names of the modules to check against.
+
+    Returns:
+      None or a list of entries inside the line.
+    """
+    for module in modules:
+      entries = self.IsInputModule(line, module)
+
+      if entries:
+        return entries
+
+    return None
