@@ -45,7 +45,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
 
   logging.debug('Buffer size: %d', buffer_size)
   temp_buffer = []
-  for line in sortfile.readlines():
+  for line in sortfile:
     # should be YYYYMMDDHHMMSS
     date_and_time_str = '%s%s%s%s%s%s' % (line[6:10], line[0:2], line[3:5],
                                           line[11:13], line[14:16], line[17:19])
