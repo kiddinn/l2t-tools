@@ -46,13 +46,15 @@ def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
   logging.debug('Buffer size: %d', buffer_size)
   temp_buffer = []
   for line in sortfile:
-    # should be YYYYMMDDHHMMSS
+    # Should be YYYYMMDDHHMMSS
+    # That is we are creating an int that can be used for quick sorting based
+    # on the above values.
     date_and_time_str = '%s%s%s%s%s%s' % (line[6:10], line[0:2], line[3:5],
                                           line[11:13], line[14:16], line[17:19])
     try:
       date_and_time = int(date_and_time_str)
     except ValueError as e:
-      logging.warning('[Split] Unable to parse line (%s): %s', e, line)
+      logging.warning('[Split] Unable to parse line (%s): Error msg: %s', line, e)
       continue
     a_list = (date_and_time, line)
     if not FilterOut(a_list, dfilters):
@@ -84,26 +86,27 @@ def FlushBuffer(buf, count, temp):
 
   fh.close()
 
-def FilterOut(test, filters):
+def FilterOut(test, date_filters, content_filters={}):
   """A simple method to filter out lines based on their date/content.
 
   Args:
     test: A list containing two entries; the date as an int and the whole line.
-    filters: A list containing the date filter (low and high).
+    date_filters: A list containing the date filter (low and high).
+    content_filters: A dict containing more detailed content filters.
 
   Returns:
     True if the entry should be filtered out, False otherwise."""
-  if not len(filters) == 2:
+  if not len(date_filters) == 2:
     return False
 
-  if not filters[0]:
+  if not date_filters[0]:
     return False
 
-  if filters[1]:
-    if test[0] > filters[1]:
+  if date_filters[1]:
+    if test[0] > date_filters[1]:
       return True
 
-  if test[0] < filters[0]:
+  if test[0] < date_filters[0]:
     return True
 
   return False
@@ -134,7 +137,15 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
   count_duplicates = 0
 
   for fn in GetListOfFiles(in_file_str):
-    files.append(open(fn, 'rb'))
+    try:
+      files.append(open(fn, 'rb'))
+    except IOError as e:
+      logging.error('Unable to append files, perhaps to increase the buffer size? <%s>', e)
+      logging.error('All processing has been aborted and temporary files will be removed.')
+      out_file.close()
+      for fh in files:
+        fh.close()
+      return
     line = files[-1].readline()
     if not line:
       _ = files.pop()

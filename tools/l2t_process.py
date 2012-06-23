@@ -92,6 +92,9 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   option_parser.add_option('--countsystem32', dest='countsystem32', action='store_true',
                            default=False, help='Test plugin that does nothing of value.')
 
+  option_parser.add_option('--force', dest='force', action='store_true',
+                           default=False, help='Force the use of buffer sizes less than 60Mb.')
+
   options, args = option_parser.parse_args()
 
   if options.debug:
@@ -160,6 +163,12 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     else:
       buffer_use_size = BUFFER_SIZE
 
+    if not options.force and buffer_use_size < 60 * 1024 * 1024:
+      logging.warning('Buffer size is smaller than 60Mb, are you sure?')
+      logging.warning('Perhaps you wanted to use the keyword "m" after the number to denote Mb?')
+      logging.warning('Processing cancelled, if you really want the buffer to be this small use --force option.')
+      sys.exit(1)
+
     # If the size of the original file is smaller then the buf size, adjust it to zero (all file).
     if os.stat(options.filename).st_size < buffer_use_size:
       buffer_use_size = 0
@@ -181,9 +190,3 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     for name in l2t_sort.GetListOfFiles(temp_output_name):
       os.remove(name)
 
-#           "keyword=s"   => \$keyword_file,
-#           "whitelist=s" => \$whitelist_file,
-#           "include!"    => \$include_timestomp,
-#           "exclude!"    => \$exclude_timestomp,
-#           "scatter|s=s" => \$draw_scatter_plot,
-#           "multi"       => \$multi_slice,
