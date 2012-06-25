@@ -41,7 +41,7 @@ DEFAULT_RULE_DIR = '/usr/local/yara/rules'
 DEFAULT_RULE = 'all.rules'
 
 
-def ParseTimeLine(filehandle, yara_rules, delim=','):
+def ParseTimeLine(filehandle, yara_rules, include_macb=False, delim=','):
   """Run YARA rules against a l2t_csv timeline.
 
   This function will read the l2t_csv file and compare
@@ -52,6 +52,9 @@ def ParseTimeLine(filehandle, yara_rules, delim=','):
     filehandle: A filehandle to the l2t_csv file.
     yara_rules: A full path to the YARA rule file.
     delim: A string containing the delimitor for the l2t_csv
+    include_macb: Boolean value determining if we want the evaluation
+    line to include the MACB value or not (by default it is not part
+    of the line that is evaluated against the YARA rules).
     file (can be a comma or a tab for instance).
   """
   try:
@@ -65,7 +68,12 @@ def ParseTimeLine(filehandle, yara_rules, delim=','):
   reader = csv.DictReader(filehandle, delimiter=delim)
 
   for row in reader:
-    hits = rules.match(data='[%s] %s' % (row['format'], row['desc']))
+    if include_macb:
+      line_eval = '[%s] %s %s' % (row['format'], row['MACB'], row['desc'])
+    else:
+      line_eval = '[%s] %s' % (row['format'], row['desc'])
+
+    hits = rules.match(data=line_eval)
     if hits:
       for hit in hits:
         meta_desc = hit.meta.get('description', '')
@@ -89,35 +97,39 @@ if __name__ == '__main__':
            '%s assists you with quickly going over your timeline and automatically'
            ' scan for known interesting or "evil" entries within it.' % base)
 
-  option_parser = argparse.ArgumentParser(description=usage)
+  arg_parser = argparse.ArgumentParser(description=usage)
 
-  option_parser.add_argument('-f', '--file', '-t', '--timeline', dest='filename',
-                             action='store', metavar='FILE',
-                             help=('The path to the timeline that is to be'
-                                 ' parsed.'))
-  option_parser.add_argument('--tab', dest='tabfile', action='store_true',
-                             default=False,
-                             help='This is a tab delimited file, not a CSV one.')
-  option_parser.add_argument('-r', '--rule', dest='rulefile', action='store',
-                             default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
-                             metavar='RULE', help=('The path to the YARA'
-                                                   ' extended rule file'
-                                                   ' to compare against'))
-  options = option_parser.parse_args()
+  arg_parser.add_argument('-f', '--file', '-t', '--timeline', dest='filename',
+                          action='store', metavar='FILE',
+                          help=('The path to the timeline that is to be'
+                                ' parsed.'))
+  arg_parser.add_argument('--tab', dest='tabfile', action='store_true',
+                          default=False,
+                          help='This is a tab delimited file, not a CSV one.')
+  arg_parser.add_argument('--macb', dest='macb', action='store_true',
+                          default=False,
+                          help=('We would like to include the MACB field in the '
+                                'evaluation field.'))
+  arg_parser.add_argument('-r', '--rule', dest='rulefile', action='store',
+                          default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
+                          metavar='RULE', help=('The path to the YARA'
+                                                ' extended rule file'
+                                                ' to compare against'))
+  options = arg_parser.parse_args()
 
   limiter = ','
   if options.tabfile:
     limiter = '\t'
 
   if not options.filename:
-    option_parser.error('Missing a filename')
+    arg_parser.error('Missing a filename')
 
   if not os.path.isfile(options.filename):
-    option_parser.error('[%s] does not exist.' % options.filename)
+    arg_parser.error('[%s] does not exist.' % options.filename)
 
   if not os.path.isfile(options.rulefile):
-    option_parser.error('Rule file: [%s] does NOT exist.' % options.rulefile)
+    arg_parser.error('Rule file: [%s] does NOT exist.' % options.rulefile)
 
   with open(options.filename, 'rb') as f:
-    ParseTimeLine(f, options.rulefile, limiter)
+    ParseTimeLine(f, options.rulefile, arg_parser.macb, limiter)
 
