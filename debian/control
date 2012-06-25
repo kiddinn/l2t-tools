@@ -12,5 +12,10 @@ Architecture: all
 Depends: ${python:Depends}
 Recommends: log2timeline
 Description: Tools designed to work with log2timeline's default output.
+ Although YARA is not put as a strict dependency (will be shortly) it is
+ vital if you want to be able to run the l2t_find_evil tool, so strongly
+ recommend installing YARA before running it.
  L2t-tools provide few tools used to process the l2t_csv file that is the
  default output of log2timeline.
+  + l2t_process.py - sort, filter and analyse your super timeline (l2t_csv).
+  + l2t_find_evil.py - automated signature based scans on your supertimeline.

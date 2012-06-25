@@ -31,8 +31,8 @@ This file is part of l2t-tools.
 """
 __author__ = 'kristinn@log2timeline.net (Kristinn Gudjonsson)'
 
+import argparse 
 import csv
-import optparse
 import os
 import sys
 import yara
@@ -44,9 +44,9 @@ DEFAULT_RULE = 'all.rules'
 def ParseTimeLine(filehandle, yara_rules, delim=','):
   """Run YARA rules against a l2t_csv timeline.
 
-  This function will read the l2t_csv file using the CSV
-  module and split each line up and only compare the YARA
-  rules against the description field and the format one.
+  This function will read the l2t_csv file and compare
+  YARA rules against the name of the input module and
+  description field of the CSV file.
 
   Args:
     filehandle: A filehandle to the l2t_csv file.
@@ -68,44 +68,42 @@ def ParseTimeLine(filehandle, yara_rules, delim=','):
     hits = rules.match(data='[%s] %s' % (row['format'], row['desc']))
     if hits:
       for hit in hits:
-        meta_desc = ''
+        meta_desc = hit.meta.get('description', '')
 
-        if 'description' in hit.meta:
-          meta_desc = hit.meta['description']
-
+        meta_case = ''
         if 'case_nr' in hit.meta:
-          print '[%s - %s (known from case: %s)] %s %s [%s] = %s' % (
-              hit.rule,
-              meta_desc,
-              hit.meta['case_nr'],
-              row['date'],
-              row['time'],
-              row['timezone'],
-              row['desc'])
-        else:
-          print '[%s - %s] %s %s [%s] = %s' % (
-              hit.rule,
-              meta_desc,
-              row['date'],
-              row['time'],
-              row['timezone'],
-              row['desc'])
+          meta_case = ' (known from case: %s)' % hit.meta['case_nr']
+
+        print '[%s - %s%s] %s %s [%s] = %s' % (
+            hit.rule,
+            meta_desc,
+            meta_case,
+            row['date'],
+            row['time'],
+            row['timezone'],
+            row['desc'])
 
 if __name__ == '__main__':
-  option_parser = optparse.OptionParser(usage=__doc__)
-  option_parser.add_option('-f', '--file', '-t', '--timeline', dest='filename',
-                           action='store', metavar='FILE',
-                           help=('The path to the timeline that is to be'
+  base = os.path.basename(sys.argv[0])
+  usage = ('Automate your timeline analysis using YARA signature matching. '
+           '%s assists you with quickly going over your timeline and automatically'
+           ' scan for known interesting or "evil" entries within it.' % base)
+
+  option_parser = argparse.ArgumentParser(description=usage)
+
+  option_parser.add_argument('-f', '--file', '-t', '--timeline', dest='filename',
+                             action='store', metavar='FILE',
+                             help=('The path to the timeline that is to be'
                                  ' parsed.'))
-  option_parser.add_option('--tab', dest='tabfile', action='store_true',
-                           default=False,
-                           help='This is a tab delimited file, not a CSV one.')
-  option_parser.add_option('-r', '--rule', dest='rulefile', action='store',
-                           default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
-                           metavar='FILE', help=('The path to the YARA'
-                                                 ' extended rule file'
-                                                 ' to compare against'))
-  options, argv = option_parser.parse_args()
+  option_parser.add_argument('--tab', dest='tabfile', action='store_true',
+                             default=False,
+                             help='This is a tab delimited file, not a CSV one.')
+  option_parser.add_argument('-r', '--rule', dest='rulefile', action='store',
+                             default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
+                             metavar='RULE', help=('The path to the YARA'
+                                                   ' extended rule file'
+                                                   ' to compare against'))
+  options = option_parser.parse_args()
 
   limiter = ','
   if options.tabfile:
