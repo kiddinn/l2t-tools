@@ -21,12 +21,13 @@ This file is part of l2t-tools.
 """
 import logging
 import os
+import re
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
 
 
-def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
+def ExternalSplit(sortfile, temp_name, dfilters, cfilters, buffer_size=0):
   """External sorting algorithm.
 
   This is an implementation of an external sorting algorithm that splits up
@@ -37,6 +38,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
     sortfile: The filehandle to the original bodyfile that needs to be sorted.
     temp_name: Name of the temporary output file used to store sorted portions.
     dfilters: A list (2 entries) with datefilters, integers.
+    cfilters: A dict object with other content based filters.
     buffer_size: The size of the buffer used for sorting (if zero all file is
     loaded in memory).
   """
@@ -57,10 +59,10 @@ def ExternalSplit(sortfile, temp_name, dfilters, buffer_size=0):
       logging.warning('[Split] Unable to parse line (%s): Error msg: %s', line, e)
       continue
     a_list = (date_and_time, line)
-    if not FilterOut(a_list, dfilters):
+    if not FilterOut(a_list, dfilters, cfilters):
       temp_buffer.append(a_list)
+      check_size += len(line)
 
-    check_size += len(line)
     if buffer_size and (check_size >= buffer_size):
       logging.debug('[ExternalSplit] Flushing, bufsize: %d, and check_size: %d', buffer_size, check_size)
       FlushBuffer(temp_buffer, counter, temp_name)
@@ -95,18 +97,34 @@ def FilterOut(test, date_filters, content_filters={}):
     content_filters: A dict containing more detailed content filters.
 
   Returns:
-    True if the entry should be filtered out, False otherwise."""
+    True if the entry should be filtered out, False otherwise.
+  """
   if not len(date_filters) == 2:
     return False
 
-  if not date_filters[0]:
-    return False
+  low, high = date_filters
+  date, line = test
 
-  if date_filters[1]:
-    if test[0] > date_filters[1]:
-      return True
+  if low and date < low:
+    return True
 
-  if test[0] < date_filters[0]:
+  if high and date > high:
+    return True
+
+  # remove entries if there is a hit
+  if 'blacklist' in content_filters:
+    blacklists = content_filters['blacklist']
+    for blacklist in blacklists:
+      if blacklist.search(line.strip(' ')):
+        return True
+
+  # only include entries if there is a hit
+  if 'whitelist' in content_filters:
+    whitelists = content_filters['whitelist']
+    for whitelist in whitelists:
+      if whitelist.search(line.strip(' ')):
+        logging.debug('A match found: line <%s>', line)
+        return False
     return True
 
   return False
@@ -209,3 +227,23 @@ def GetListOfFiles(in_file_str):
     if in_file_str in fn:
       yield fn
 
+def BuildKeywordList(in_file_str):
+  """Return a list of compiled re objects that can be used for keyword matching."""
+  if not os.path.isfile(in_file_str):
+    return None
+
+  the_list = []
+  with open(in_file_str, 'rb') as fh:
+    for word in fh:
+      if not word:
+        continue
+      if word[0] == '#':
+        continue
+      
+      # TODO: complete this
+      #   + swap commas for dashes s/,/-/g
+      #   + swap \ for / (s/\\/\//g)
+      word = word.strip('\n\r ')
+      logging.debug('Keyword list, adding the word: <%s>', word)
+      the_list.append(re.compile(word, re.I))
+  return the_list

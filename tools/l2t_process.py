@@ -33,7 +33,7 @@ import logging
 import os
 import re
 import sys
-import optparse
+import argparse
 import random
 
 from l2t_tools.lib import l2t_sort
@@ -70,32 +70,48 @@ l2t_process.py [OPTIONS] -b CSV_FILE [DATE_RANGE]
 
 Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
 
-  option_parser = optparse.OptionParser(usage = usage)
+  arg_parser = argparse.ArgumentParser(description=usage)
 
-  option_parser.add_option('-b', '--file', '--bodyfile', dest='filename',
-                           help='The input CSV file.', metavar='FILE')
+  arg_parser.add_argument('-b', '--file', '--bodyfile', dest='filename',
+                          help='The input CSV file.', metavar='BODYFILE')
 
-  option_parser.add_option('--buffer-size', '--bs', dest='buffer_size',
-                           help='The size of the buffer used for external sorting.',
-                           action='store')
+  arg_parser.add_argument('--buffer-size', '--bs', dest='buffer_size',
+                          help='The size of the buffer used for external sorting.',
+                          action='store')
 
-  option_parser.add_option('-d', '--debug', dest='debug',
-                           action='store_true', default=False,
-                           help='Turn on debug information.')
+  arg_parser.add_argument('-d', '--debug', dest='debug',
+                          action='store_true', default=False,
+                          help='Turn on debug information.')
 
-  option_parser.add_option('-t', '--tab', dest='tab', action='store_true',
-                           default=False, help='The input file is TAB delimited.')
+  arg_parser.add_argument('-t', '--tab', dest='tab', action='store_true',
+                          default=False, help='The input file is TAB delimited.')
 
-  option_parser.add_option('--output', '-o', dest='output', action='store',
-                           metavar='FILE', help='The output file', default='STDOUT')
+  arg_parser.add_argument('--output', '-o', dest='output', action='store',
+                          metavar='FILE', help='The output file', default='STDOUT')
 
-  option_parser.add_option('--countsystem32', dest='countsystem32', action='store_true',
-                           default=False, help='Test plugin that does nothing of value.')
+  arg_parser.add_argument('--whitelist', '-w', dest='whitelist', action='store',
+                          metavar='WHITELIST_FILE', default=None,
+                          help=('A file with keywords used to filter out content of'
+                                ' the timeline. If this option is used then no entry'
+                                ' will be included in the timeline except it matches'
+                                ' any of the keywords provided.'))
 
-  option_parser.add_option('--force', dest='force', action='store_true',
-                           default=False, help='Force the use of buffer sizes less than 60Mb.')
+  arg_parser.add_argument('--blacklist', '-k', dest='blacklist', action='store',
+                          metavar='BLACKLIST_FILE', default=None,
+                          help=('A file with keywords used to filter out content of'
+                                ' the timeline. If this option is used then all entries'
+                                ' in the timeline will be filtered out if a match is found'
+                                ' here, that is if a match is found that entry will be '
+                                'left out of the final timeline, can be used in conjunction'
+                                ' with the whitelist to produce an even greater filter.'))
 
-  options, args = option_parser.parse_args()
+  arg_parser.add_argument('--countsystem32', dest='countsystem32', action='store_true',
+                          default=False, help='Test plugin that does nothing of value.')
+
+  arg_parser.add_argument('--force', dest='force', action='store_true',
+                          default=False, help='Force the use of buffer sizes less than 60Mb.')
+
+  options = arg_parser.parse_args()
 
   if options.debug:
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
@@ -128,6 +144,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   # check date filter
   date_filter_low = None
   date_filter_high = None
+  args = []
   if len(args) == 1:
     date_regex = re.compile('^(\d{1,2})\-(\d{1,2})\-(\d{4})$')
     daterange_regex = re.compile('^(\d{1,2})\-(\d{1,2})\-(\d{4})\.\.(\d{1,2})\-(\d{1,2})\-(\d{4})$')
@@ -177,8 +194,18 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     temp_output_name = 'l2t_sort_temp_%05d' % random.randint(1,10000)
     logging.debug('[l2t_process] Using <%s> as base name for temporary output files.', temp_output_name)
 
+    content_filters = {}
+    if options.blacklist:
+      logging.warning('Building a blacklist.')
+      content_filters['blacklist'] = l2t_sort.BuildKeywordList(options.blacklist)
+
+    if options.whitelist:
+      logging.warning('Building a whitelist.')
+      content_filters['whitelist'] = l2t_sort.BuildKeywordList(options.whitelist)
+
     try:
-      l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high), buffer_use_size)
+      l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high),
+                             content_filters, buffer_use_size)
       l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins)
     except KeyboardInterrupt:
       logging.warning('Process killed, cleaning up.')
