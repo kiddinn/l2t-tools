@@ -227,7 +227,7 @@ def GetListOfFiles(in_file_str):
     if in_file_str in fn:
       yield fn
 
-def BuildKeywordList(in_file_str):
+def BuildKeywordList(in_file_str, flags):
   """Return a list of compiled re objects that can be used for keyword matching."""
   if not os.path.isfile(in_file_str):
     return None
@@ -245,5 +245,5 @@ def BuildKeywordList(in_file_str):
       #   + swap \ for / (s/\\/\//g)
       word = word.strip('\n\r ')
       logging.debug('Keyword list, adding the word: <%s>', word)
-      the_list.append(re.compile(word, re.I))
+      the_list.append(re.compile(word, flags))
   return the_list

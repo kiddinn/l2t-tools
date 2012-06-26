@@ -75,7 +75,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   arg_parser.add_argument('-b', '--file', '--bodyfile', dest='filename',
                           help='The input CSV file.', metavar='BODYFILE')
 
-  arg_parser.add_argument('--buffer-size', '--bs', dest='buffer_size',
+  arg_parser.add_argument('--bs', '--buffer-size', dest='buffer_size',
                           help='The size of the buffer used for external sorting.',
                           action='store')
 
@@ -86,27 +86,33 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   arg_parser.add_argument('-t', '--tab', dest='tab', action='store_true',
                           default=False, help='The input file is TAB delimited.')
 
-  arg_parser.add_argument('--output', '-o', dest='output', action='store',
+  arg_parser.add_argument('-o', '--output', dest='output', action='store',
                           metavar='FILE', help='The output file', default='STDOUT')
 
-  arg_parser.add_argument('--whitelist', '-w', dest='whitelist', action='store',
+  arg_parser.add_argument('-w', '--whitelist', dest='whitelist', action='store',
                           metavar='WHITELIST_FILE', default=None,
                           help=('A file with keywords used to filter out content of'
                                 ' the timeline. If this option is used then no entry'
                                 ' will be included in the timeline except it matches'
-                                ' any of the keywords provided.'))
+                                ' any of the keywords provided.'
+                                ' N.b. the keywords are compiled as regular expressions.'))
 
-  arg_parser.add_argument('--blacklist', '-k', dest='blacklist', action='store',
+  arg_parser.add_argument('-k', '--blacklist', dest='blacklist', action='store',
                           metavar='BLACKLIST_FILE', default=None,
                           help=('A file with keywords used to filter out content of'
                                 ' the timeline. If this option is used then all entries'
                                 ' in the timeline will be filtered out if a match is found'
                                 ' here, that is if a match is found that entry will be '
                                 'left out of the final timeline, can be used in conjunction'
-                                ' with the whitelist to produce an even greater filter.'))
+                                ' with the whitelist to produce an even greater filter.'
+                                ' N.b. the keywords are compiled as regular expressions.'))
 
   arg_parser.add_argument('--countsystem32', dest='countsystem32', action='store_true',
                           default=False, help='Test plugin that does nothing of value.')
+
+  arg_parser.add_argument('-i', '--case-insensitive', dest='flag_case', action='store_true',
+                          default=False, help=('Make keyword searches case insensitive (by default'
+                                               ' it is case sensitive).'))
 
   arg_parser.add_argument('--force', dest='force', action='store_true',
                           default=False, help='Force the use of buffer sizes less than 60Mb.')
@@ -184,6 +190,11 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     else:
       buffer_use_size = BUFFER_SIZE
 
+    if options.flag_case:
+      flags = re.I
+    else:
+      flags = re.DOTALL
+
     if not options.force and buffer_use_size < 60 * 1024 * 1024:
       logging.warning('Buffer size is smaller than 60Mb, are you sure?')
       logging.warning('Perhaps you wanted to use the keyword "m" after the number to denote Mb?')
@@ -201,11 +212,11 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     content_filters = {}
     if options.blacklist:
       logging.warning('Building a blacklist.')
-      content_filters['blacklist'] = l2t_sort.BuildKeywordList(options.blacklist)
+      content_filters['blacklist'] = l2t_sort.BuildKeywordList(options.blacklist, flags)
 
     if options.whitelist:
       logging.warning('Building a whitelist.')
-      content_filters['whitelist'] = l2t_sort.BuildKeywordList(options.whitelist)
+      content_filters['whitelist'] = l2t_sort.BuildKeywordList(options.whitelist, flags)
 
     try:
       l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high),
