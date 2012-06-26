@@ -111,6 +111,10 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   arg_parser.add_argument('--force', dest='force', action='store_true',
                           default=False, help='Force the use of buffer sizes less than 60Mb.')
 
+  arg_parser.add_argument('date_range', nargs='?', action='store', metavar='DATE_RANGE',
+                          default=None, help='Date filter, either MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY')
+
+
   options = arg_parser.parse_args()
 
   if options.debug:
@@ -144,19 +148,19 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   # check date filter
   date_filter_low = None
   date_filter_high = None
-  args = []
-  if len(args) == 1:
+
+  if options.date_range:
     date_regex = re.compile('^(\d{1,2})\-(\d{1,2})\-(\d{4})$')
     daterange_regex = re.compile('^(\d{1,2})\-(\d{1,2})\-(\d{4})\.\.(\d{1,2})\-(\d{1,2})\-(\d{4})$')
 
-    m_date = date_regex.match(args[0])
+    m_date = date_regex.match(options.date_range)
 
     if m_date:
       date_filter_low = int('%04d%02d%02d000000' % (int(m_date.group(3)), int(m_date.group(1)), int(m_date.group(2))))
     else:
-      m_range = daterange_regex.match(args[0])
+      m_range = daterange_regex.match(options.date_range)
       if m_range:
-        filters = args[0].split('..')
+        filters = options.date_range.split('..')
         date_filter_low = int(''.join(filters[0].split('-')))
         date_filter_low = int('%04d%02d%02d000000' % (int(m_range.group(3)), int(m_range.group(1)), int(m_range.group(2))))
         date_filter_high = int('%04d%02d%02d235959' % (int(m_range.group(6)), int(m_range.group(4)), int(m_range.group(5))))
