@@ -175,8 +175,8 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
 
   if len(files) == 1:
     line = lines.pop()
+    count_duplicates, last_line = ProcessLine(line, None, out_file, count_duplicates, plugins)
     out_file.write(line[1])
-    last_line = line
     for line in files[0]:
       count_duplicates, last_line = ProcessLine((line[0:14], line[15:]), last_line, out_file, count_duplicates, plugins)
     files.pop()
@@ -210,6 +210,9 @@ def ProcessLine(new_line, last_line, output, duplicates, plugins=[]):
 
 def IsADuplicate(line_a, line_b):
   """Indicate whether or not two lines are duplicates of one another."""
+  if not line_b:
+    return False
+
   try:
     if line_a[0] == line_b[0]:
       if line_a[1] == line_b[1]:

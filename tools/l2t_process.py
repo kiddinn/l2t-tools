@@ -38,6 +38,7 @@ import random
 
 from l2t_tools.lib import l2t_sort
 from l2t_tools.plugins import count_system32
+from l2t_tools.plugins import temp_exe
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
@@ -56,7 +57,7 @@ LOG_FORMAT = '[%(levelname)s - %(module)s] %(message)s'
 
 def IsL2tCsv(filehandle, out):
   """Read the first line and parse the header to determine if this is a L2T_CSV file."""
-  line = f.readline()
+  line = filehandle.readline()
   
   if L2T_RE.match(line):
     out.write(line)
@@ -110,6 +111,10 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   arg_parser.add_argument('--countsystem32', dest='countsystem32', action='store_true',
                           default=False, help='Test plugin that does nothing of value.')
 
+  arg_parser.add_argument('--exe-in-temp', dest='exe_in_temp', action='store_true',
+                          default=False, help=('Plugin that prints out lines that contains '
+                                               'executables from a temp directory.'))
+
   arg_parser.add_argument('-i', '--case-insensitive', dest='flag_case', action='store_true',
                           default=False, help=('Make keyword searches case insensitive (by default'
                                                ' it is case sensitive).'))
@@ -150,6 +155,8 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   plugins = []
   if options.countsystem32:
     plugins.append(count_system32.System32Count(separator))
+  if options.exe_in_temp:
+    plugins.append(temp_exe.WinExeInTemp(separator))
 
   # check date filter
   date_filter_low = None
