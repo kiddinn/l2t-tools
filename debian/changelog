@@ -1,3 +1,9 @@
+l2t-tools (0.10-2) natty hardy maverick karmic lucid; urgency=low
+
+  * Bug fixes and small updates.
+
+ -- Kristinn Gudjonsson <kristinn@log2timeline.net>  Sun, 27 Jun 2012 07:00:16 -0800
+
 l2t-tools (0.10-1) natty hardy maverick karmic lucid; urgency=low
 
   * First release.
