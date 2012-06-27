@@ -130,9 +130,11 @@ def FilterOut(test, date_filters, content_filters={}, plugin_filters=[]):
     return True
 
   # go over all the plugin filters:
-  for pfilter in plugin_filters:
-    if pfilter.FilterLine(test):
-      return True
+  if plugin_filters:
+    for pfilter in plugin_filters:
+      if not pfilter.FilterLine(test):
+        return False
+    return True
 
   return False
 
@@ -183,7 +185,6 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
   if len(files) == 1:
     line = lines.pop()
     count_duplicates, last_line = ProcessLine(line, None, out_file, count_duplicates, plugins)
-    out_file.write(line[1])
     for line in files[0]:
       count_duplicates, last_line = ProcessLine((line[0:14], line[15:]), last_line, out_file, count_duplicates, plugins)
     files.pop()

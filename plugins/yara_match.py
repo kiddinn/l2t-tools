@@ -24,6 +24,7 @@ This file is part of l2t-tools.
 import logging
 import re
 import os
+import yara
 
 from l2t_tools.lib import plugin
 
@@ -65,7 +66,7 @@ class YaraMatch(plugin.L2tPlugin):
     _, line = entries
     columns = line.split(self.separator)
 
-    hits = rules.match(data='[%s] %s' % (line[15], line[10]))
+    hits = self.rules.match(data='[%s] %s' % (columns[15], columns[10]))
     if hits:
       for hit in hits:
         meta_desc = hit.meta.get('description', '')
@@ -78,10 +79,10 @@ class YaraMatch(plugin.L2tPlugin):
             hit.rule,
             meta_desc,
             meta_case,
-            row['date'],
-            row['time'],
-            row['timezone'],
-            row['desc']))
+            columns[0],
+            columns[1],
+            columns[2],
+            columns[10]))
 
   def Report(self):
     """Return a report of findings.

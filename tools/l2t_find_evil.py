@@ -131,5 +131,5 @@ if __name__ == '__main__':
     arg_parser.error('Rule file: [%s] does NOT exist.' % options.rulefile)
 
   with open(options.filename, 'rb') as f:
-    ParseTimeLine(f, options.rulefile, arg_parser.macb, limiter)
+    ParseTimeLine(f, options.rulefile, options.macb, limiter)
 

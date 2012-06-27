@@ -262,7 +262,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
 
     try:
       l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high),
-                             content_filters, buffer_use_size)
+                             content_filters, csv_filters, buffer_use_size)
       l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins)
     except KeyboardInterrupt:
       logging.warning('Process killed, cleaning up.')

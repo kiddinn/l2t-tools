@@ -24,6 +24,7 @@ This file is part of l2t-tools.
 import logging
 import re
 import os
+import yara
 
 from l2t_tools.lib import plugin
 
@@ -61,9 +62,9 @@ class YaraFilter(plugin.L2tFilter):
     _, line = entries
     columns = line.split(self.separator)
 
-    hits = rules.match(data='[%s] %s' % (line[15], line[10]))
+    hits = self.rules.match(data='[%s] %s' % (columns[15], columns[10]))
     if hits:
-      return True
+      return False
 
-    return False
+    return True
 
