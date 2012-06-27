@@ -14,3 +14,7 @@ New features:
 
   l2t_find_evil
     Incorporate into l2t_process.
+
+Stuff missing:
+  Unit tests, unit tests and unit tests... ohh did I mention unit tests?
+    Nothing gets "officially" released until there is a unit test that tests at least most portion of this code.
