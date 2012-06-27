@@ -27,7 +27,7 @@ __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
 
 
-def ExternalSplit(sortfile, temp_name, dfilters, cfilters, buffer_size=0):
+def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size=0):
   """External sorting algorithm.
 
   This is an implementation of an external sorting algorithm that splits up
@@ -39,6 +39,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, buffer_size=0):
     temp_name: Name of the temporary output file used to store sorted portions.
     dfilters: A list (2 entries) with datefilters, integers.
     cfilters: A dict object with other content based filters.
+    pfilters: A plugin based filter approach, a list of filter objects.
     buffer_size: The size of the buffer used for sorting (if zero all file is
     loaded in memory).
   """
@@ -59,7 +60,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, buffer_size=0):
       logging.warning('[Split] Unable to parse line (%s): Error msg: %s', line, e)
       continue
     a_list = (date_and_time, line)
-    if not FilterOut(a_list, dfilters, cfilters):
+    if not FilterOut(a_list, dfilters, cfilters, pfilters):
       temp_buffer.append(a_list)
       check_size += len(line)
 
@@ -88,13 +89,14 @@ def FlushBuffer(buf, count, temp):
 
   fh.close()
 
-def FilterOut(test, date_filters, content_filters={}):
+def FilterOut(test, date_filters, content_filters={}, plugin_filters=[]):
   """A simple method to filter out lines based on their date/content.
 
   Args:
     test: A list containing two entries; the date as an int and the whole line.
     date_filters: A list containing the date filter (low and high).
     content_filters: A dict containing more detailed content filters.
+    plugin_filters: A list of filter objects.
 
   Returns:
     True if the entry should be filtered out, False otherwise.
@@ -126,6 +128,11 @@ def FilterOut(test, date_filters, content_filters={}):
         logging.debug('A match found: line <%s>', line)
         return False
     return True
+
+  # go over all the plugin filters:
+  for pfilter in plugin_filters:
+    if pfilter.FilterLine(test):
+      return True
 
   return False
 

@@ -7,8 +7,10 @@ New features:
   l2t_process
     Add temporal proximity - include lines not only in hit (keywords) but also in temporal proximity (+- 5 min or adjustable, or X entries)
     Plugin: Convert the l2t_find_evil into a plugin.
+      Done with a matching plugin.
+      Need to write a filter plugin too.
     Plugin: Create a Mathplotlib module/plugin to draw/calculate scatter plots and do that automatically (that is the drawing)
-    Plugin: Add any .exe files that reside in the temporary directory to the timeline (very suspicious)
     Add the keyword itself that was matched on and put it in the notes field (change the entry)
 
   l2t_find_evil
+    Incorporate into l2t_process.

@@ -95,3 +95,23 @@ class L2tPlugin(object):
         return entries
 
     return None
+
+
+class L2tFilter(object):
+  """Class used for L2t_CSV filters."""
+  
+  def __init__(self, separator):
+    self.separator = separator
+
+  def FilterLine(self, line):
+    """Return true if the line should be filtered out.
+
+    Args:
+      line: A list of two entries, a timestamp (int) and
+      the actual line itself.
+
+    Returns:
+      True if the line should be filtered out, otherwise
+      false.
+    """
+    return False

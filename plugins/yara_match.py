@@ -1,7 +1,8 @@
 #!/usr/bin/python
 """
-A simple plugin that checks for the existence of an executable in a Temp directory.
-A temp directory is a directory that has the name of "/tmp/" or "/temp/".
+This is a simple plugin that does the same deal as the l2t_find_evil.py script does.
+It loads up a YARA rule file and runs it against each line in the CSV file and if there
+is a match it will fire up an alert.
 
 Copyright 2012 Kristinn Gudjonsson (kristinn ( a t ) log2timeline (d o t) net)
 
@@ -22,6 +23,7 @@ This file is part of l2t-tools.
 """
 import logging
 import re
+import os
 
 from l2t_tools.lib import plugin
 
@@ -29,26 +31,26 @@ __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
 
 
-class WinExeInTemp(plugin.L2tPlugin):
+class YaraMatch(plugin.L2tPlugin):
   """Count the number of lines that contain a file inside System32."""
 
-  EXE_TEMP = re.compile('/temp/.*.exe', re.I)
-  MODULES = ('Log2t::input::evt',
-             'Log2t::input::evtx',
-             'Log2t::input::prefetch',
-             'Log2t::input::mft',
-             'Log2t::input::exif',
-             'Log2t::input::symantec',
-             'Log2t::input::win_link',
-             'Log2t::input::ftk_dirlisting',
-             'Log2t::input::mactime',
-             'Log2t::input::mcafee')
+  def __init__(self, separator, rule_file):
+    """Constructor.
 
-  def __init__(self, separator):
-    super(WinExeInTemp, self).__init__(separator)
+    Args:
+      separator: The CSV file separator, usually a comma or a tab.
+      rule_file: The path to a YARA rule file.
 
-    logging.info('Plugin: ExeInTemp Turned ON.')
-    self.exes = []
+    Raises:
+      IOError: If the YARA rule file does not exist.
+    """
+    if not os.path.isfile(rule_file):
+      raise IOError('The YARA rule file does not exist.')
+
+    super(YaraMatch, self).__init__(separator)
+    self.rules = yara.compile(rule_file)
+    logging.info('Plugin: YaraMatch Turned ON.')
+    self.alerts = []
 
   def AppendLine(self, entries):
     """Appends a line to this plugin.
@@ -60,13 +62,26 @@ class WinExeInTemp(plugin.L2tPlugin):
     Args:
       entries: A list of two entries, timestamp and the full line.
     """
-
     _, line = entries
-    columns = self.IsInputModules(line, self.MODULES)
+    columns = line.split(self.separator)
 
-    if columns:
-      if self.EXE_TEMP.search(columns[10]):
-        self.exes.append(columns[10])
+    hits = rules.match(data='[%s] %s' % (line[15], line[10]))
+    if hits:
+      for hit in hits:
+        meta_desc = hit.meta.get('description', '')
+
+        meta_case = ''
+        if 'case_nr' in hit.meta:
+          meta_case = ' (known from case: %s)' % hit.meta['case_nr']
+
+        self.alerts.append('[%s - %s%s] %s %s [%s] = %s' % (
+            hit.rule,
+            meta_desc,
+            meta_case,
+            row['date'],
+            row['time'],
+            row['timezone'],
+            row['desc']))
 
   def Report(self):
     """Return a report of findings.
@@ -75,10 +90,10 @@ class WinExeInTemp(plugin.L2tPlugin):
       A string containing the results of the plugin.
     """
     append_string = ''
-    for exe in self.exes:
-      append_string += '\n\t%s' % exe
+    for alert in self.alerts:
+      append_string += '\n\t%s' % alert
 
     if append_string:
-      return 'WinExe in Temp Directory Results:\n\tTotal entries found: %d\n%s' % (len(self.exes), append_string)
+      return 'YARA rule matches: %d.%s' % (len(self.alerts), append_string)
     else:
-      return 'WinExe in Temp: None found, have a nice day.'
+      return 'YARA rule matches: None found, have a nice day.'

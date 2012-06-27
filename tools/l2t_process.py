@@ -35,10 +35,13 @@ import re
 import sys
 import argparse
 import random
+import yara
 
 from l2t_tools.lib import l2t_sort
+from l2t_tools.filters import yara_filter
 from l2t_tools.plugins import count_system32
 from l2t_tools.plugins import temp_exe
+from l2t_tools.plugins import yara_match
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
@@ -108,12 +111,28 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
                                 ' with the whitelist to produce an even greater filter.'
                                 ' N.b. the keywords are compiled as regular expressions.'))
 
+  arg_parser.add_argument('-y', '--yara-filter', dest='yara_filters', action='store',
+                          default=None, metavar='YARA_RULE_FILE',
+                          help=('Filter events out of the timeline based on whether or not'
+                                ' a set of YARA rules triggers on the input module and description'
+                                ' field of the CSV file. This is very similar functionality to the '
+                                ' one provided by l2t_find_evil.py, however no information about '
+                                ' which rule fired or why is provided, it is a simple filter.'
+                                ' For more details use the --yara-rules to run the same rules '
+                                'as a plugin against the timeline to get that information.'))
+
   arg_parser.add_argument('--countsystem32', dest='countsystem32', action='store_true',
                           default=False, help='Test plugin that does nothing of value.')
 
   arg_parser.add_argument('--exe-in-temp', dest='exe_in_temp', action='store_true',
                           default=False, help=('Plugin that prints out lines that contains '
                                                'executables from a temp directory.'))
+
+  arg_parser.add_argument('--yara-rules', dest='yara_rules', action='store',
+                          default=None, metavar='RULE_FILE',
+                          help=('Plugin that compares each line in the timeline against a set'
+                                ' of YARA rules. This is the same functionality as is provided'
+                                ' by l2t_find_evil.py.'))
 
   arg_parser.add_argument('-i', '--case-insensitive', dest='flag_case', action='store_true',
                           default=False, help=('Make keyword searches case insensitive (by default'
@@ -157,6 +176,22 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     plugins.append(count_system32.System32Count(separator))
   if options.exe_in_temp:
     plugins.append(temp_exe.WinExeInTemp(separator))
+  if options.yara_rules:
+    try:
+      plugins.append(yara_match.YaraMatch(separator, options.yara_rules))
+    except yara.SyntaxError as e:
+      logging.error('[ERROR] Faulty YARA rule file: %s'. e)
+    except IOError as e:
+      logging.error('[ERROR] YARA Rule file not found (%s)', e)
+
+  csv_filters = []
+  if options.yara_filters:
+    try:
+      csv_filters.append(yara_filter.YaraFilter(separator, options.yara_filters)
+    except yara.SyntaxError as e:
+      logging.error('[ERROR] Faulty YARA rule file: %s'. e)
+    except IOError as e:
+      logging.error('[ERROR] YARA Rule file not found (%s)', e)
 
   # check date filter
   date_filter_low = None

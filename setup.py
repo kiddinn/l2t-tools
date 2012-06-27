@@ -59,7 +59,8 @@ setup(name='L2t Tools',
       scripts=GetTools(),
       packages=['l2t_tools',
                 'l2t_tools.lib',
-                'l2t_tools.plugins'],
+                'l2t_tools.plugins',
+                'l2t_tools.filters'],
       package_data={'l2t_tools': GetAllYaraRules()},
      )
 
