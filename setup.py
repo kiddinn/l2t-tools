@@ -28,6 +28,7 @@ import sys
 
 from distutils.core import setup
 
+
 def GetTools():
   """List up all scripts that should be runable from the command line."""
   data = []
@@ -39,6 +40,7 @@ def GetTools():
 
   return data
 
+
 def GetAllYaraRules():
   """Return all the default Yara rules for l2t_find_evil.py."""
   yara_rules = []
@@ -47,6 +49,7 @@ def GetAllYaraRules():
     yara_rules.append(os.path.join(basepath, filename))
 
   return yara_rules
+
 
 setup(name='L2t Tools',
       version='0.1',
@@ -60,6 +63,7 @@ setup(name='L2t Tools',
       packages=['l2t_tools',
                 'l2t_tools.lib',
                 'l2t_tools.plugins',
+                'l2t_tools.test_data',
                 'l2t_tools.filters'],
       package_data={'l2t_tools': GetAllYaraRules()},
      )

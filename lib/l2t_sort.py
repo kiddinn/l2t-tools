@@ -22,6 +22,7 @@ This file is part of l2t-tools.
 import logging
 import os
 import re
+import heapq
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
@@ -113,23 +114,27 @@ def FilterOut(test, date_filters, content_filters={}, plugin_filters=[]):
   if high and date > high:
     return True
 
-  # remove entries if there is a hit
+  # Remove entries if there is a hit.
   if 'blacklist' in content_filters:
     blacklists = content_filters['blacklist']
     for blacklist in blacklists:
       if blacklist.search(line.strip(' ')):
         return True
 
-  # only include entries if there is a hit
+  # Only include entries if there is a hit.
   if 'whitelist' in content_filters:
     whitelists = content_filters['whitelist']
     for whitelist in whitelists:
       if whitelist.search(line.strip(' ')):
-        logging.debug('A match found: line <%s>', line)
+        #TODO check to see if I can change the note
+        # field so it includes the match string.
         return False
     return True
 
-  # go over all the plugin filters:
+  # TODO when threading has been done, just
+  # add the event to the queue and don't think
+  # about it.
+  # Go over all the plugin filters:
   if plugin_filters:
     for pfilter in plugin_filters:
       if not pfilter.FilterLine(test):
@@ -158,54 +163,51 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
     out_file: Filehandle to the output file.
     plugins: A list of plugins to run against the input.
   """
-  files = []
-  lines = []
+  lowest = []
   last_line = []
   count_duplicates = 0
 
   for fn in GetListOfFiles(in_file_str):
     try:
-      files.append(open(fn, 'rb'))
+      handle = open(fn, 'rb')
     except IOError as e:
       logging.error('Unable to append files, perhaps to increase the buffer size? <%s>', e)
       logging.error('All processing has been aborted and temporary files will be removed.')
       out_file.close()
-      for fh in files:
+      for _ in range(len(lowest)):
+        fh = heapq.heappop(lowest)[2]
         fh.close()
       return
-    line = files[-1].readline()
+    line = handle.readline()
     if not line:
-      _ = files.pop()
+      continue
     else:
-      lines.append((int(line[0:14]), line[15:]))
-      logging.debug('Appended: %d', int(line[0:14]))
+      try:
+        heapq.heappush(lowest, (int(line[0:14]), line[15:], handle))
+        logging.debug('Appended: %d', int(line[0:14]))
+      except ValueError:
+        logging.warning('Unable to parse the timestamp: %s' % line[0:14])
     
-  logging.debug('[MERGE] FILES <%d> LINES <%d>', len(files), len(lines))
-
-  if len(files) == 1:
-    line = lines.pop()
-    count_duplicates, last_line = ProcessLine(line, None, out_file, count_duplicates, plugins)
-    for line in files[0]:
+  if len(lowest) == 1:
+    entry = heapq.heappop(lowest)
+    count_duplicates, last_line = ProcessLine((entry[0], entry[1]), None, out_file, count_duplicates, plugins)
+    for line in entry[2]:
       count_duplicates, last_line = ProcessLine((line[0:14], line[15:]), last_line, out_file, count_duplicates, plugins)
-    files.pop()
 
-  while len(files) > 0:
-    lowest = sorted(lines, key=lambda x: x[0])[0]
-    logging.debug('low: %d', lowest[0])
-    i = lines.index(lowest)
-    logging.debug('Found lowest [%d]: <%d> %s = %d', i, lowest[0], lowest[1], lines[i][0])
-    count_duplicates, last_line = ProcessLine(lowest, last_line, out_file, count_duplicates, plugins)
-    line = files[i].readline()
+  while len(lowest) > 0:
+    entry = heapq.heappop(lowest)
+    count_duplicates, last_line = ProcessLine((entry[0], entry[1]), last_line, out_file, count_duplicates, plugins)
+    line = entry[2].readline()
     if line:
-      lines[i] = (int(line[0:14]), line[15:])
-    else:
-      lines.pop(i)
-      files.pop(i)
+      try:
+        heapq.heappush(lowest, (int(line[0:14]), line[15:], entry[2]))
+      except ValueError:
+        logging.warning('Error reading from file: %s (no more processing)', entry[2].name)
 
   logging.info('Duplicates removed: %d', count_duplicates)
   out_file.close()
 
-def ProcessLine(new_line, last_line, output, duplicates, plugins=[]):
+def ProcessLine(new_line, last_line, output, duplicates, plugins):
   """Check if line is a duplicate, run through plugins and return duplicate count and last_line."""
   if not IsADuplicate(new_line, last_line):
     output.write('%s' % new_line[1])

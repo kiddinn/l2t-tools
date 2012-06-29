@@ -35,13 +35,18 @@ import re
 import sys
 import argparse
 import random
-import yara
+try:
+  import yara
+except ImportError:
+  yara = None
 
 from l2t_tools.lib import l2t_sort
-from l2t_tools.filters import yara_filter
+if yara:
+  from l2t_tools.filters import yara_filter
 from l2t_tools.plugins import count_system32
 from l2t_tools.plugins import temp_exe
-from l2t_tools.plugins import yara_match
+if yara:
+  from l2t_tools.plugins import yara_match
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
@@ -55,16 +60,24 @@ BUFFER_SIZE = 1024 * 1024 * 256
 L2T_RE = re.compile(('^date,time,timezone,MACB,source,sourcetype,type,user,host,'
                      'short,desc,version,filename,inode,notes,format,extra$'))
 
+L2T_TAB_RE = re.compile(('^date\ttime\ttimezone\tMACB\tsource\tsourcetype\ttype\tuser\thost\t'
+                         'short\tdesc\tversion\tfilename\tinode\tnotes\tformat\textra$'))
+
 LOG_FORMAT = '[%(levelname)s - %(module)s] %(message)s'
 
 
-def IsL2tCsv(filehandle, out):
+def IsL2tCsv(filehandle, sep, out):
   """Read the first line and parse the header to determine if this is a L2T_CSV file."""
   line = filehandle.readline()
   
-  if L2T_RE.match(line):
-    out.write(line)
-    return True
+  if sep in '\t':
+    if L2T_TAB_RE.match(line):
+      out.write(line)
+      return True
+  else:
+    if L2T_RE.match(line):
+      out.write(line)
+      return True
 
   return False
 
@@ -111,15 +124,16 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
                                 ' with the whitelist to produce an even greater filter.'
                                 ' N.b. the keywords are compiled as regular expressions.'))
 
-  arg_parser.add_argument('-y', '--yara-filter', dest='yara_filters', action='store',
-                          default=None, metavar='YARA_RULE_FILE',
-                          help=('Filter events out of the timeline based on whether or not'
-                                ' a set of YARA rules triggers on the input module and description'
-                                ' field of the CSV file. This is very similar functionality to the '
-                                ' one provided by l2t_find_evil.py, however no information about '
-                                ' which rule fired or why is provided, it is a simple filter.'
-                                ' For more details use the --yara-rules to run the same rules '
-                                'as a plugin against the timeline to get that information.'))
+  if yara:
+    arg_parser.add_argument('-y', '--yara-filter', dest='yara_filters', action='store',
+                            default=None, metavar='YARA_RULE_FILE',
+                            help=('Filter events out of the timeline based on whether or not'
+                                  ' a set of YARA rules triggers on the input module and description'
+                                  ' field of the CSV file. This is very similar functionality to the '
+                                  ' one provided by l2t_find_evil.py, however no information about '
+                                  ' which rule fired or why is provided, it is a simple filter.'
+                                  ' For more details use the --yara-rules to run the same rules '
+                                  'as a plugin against the timeline to get that information.'))
 
   arg_parser.add_argument('--countsystem32', dest='countsystem32', action='store_true',
                           default=False, help='Test plugin that does nothing of value.')
@@ -128,11 +142,12 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
                           default=False, help=('Plugin that prints out lines that contains '
                                                'executables from a temp directory.'))
 
-  arg_parser.add_argument('--yara-rules', dest='yara_rules', action='store',
-                          default=None, metavar='RULE_FILE',
-                          help=('Plugin that compares each line in the timeline against a set'
-                                ' of YARA rules. This is the same functionality as is provided'
-                                ' by l2t_find_evil.py.'))
+  if yara:
+    arg_parser.add_argument('--yara-rules', dest='yara_rules', action='store',
+                            default=None, metavar='RULE_FILE',
+                            help=('Plugin that compares each line in the timeline against a set'
+                                  ' of YARA rules. This is the same functionality as is provided'
+                                  ' by l2t_find_evil.py.'))
 
   arg_parser.add_argument('-i', '--case-insensitive', dest='flag_case', action='store_true',
                           default=False, help=('Make keyword searches case insensitive (by default'
@@ -219,7 +234,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     logging.debug('[FILTER] Higher date filter: %d', date_filter_high)
 
   with open(options.filename, 'rb') as f:
-    if not IsL2tCsv(f, output_file):
+    if not IsL2tCsv(f, separator, output_file):
       logging.error('This is not a L2t CSV file.')
       sys.exit(2)
 
@@ -270,6 +285,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     # Run through the results from the plugins:
     for plugin in plugins:
       logging.info('%s', plugin.Report())
+
     # Delete temp files
     for name in l2t_sort.GetListOfFiles(temp_output_name):
       os.remove(name)
