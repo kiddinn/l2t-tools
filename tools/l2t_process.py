@@ -33,7 +33,12 @@ import logging
 import os
 import re
 import sys
-import argparse
+try:
+  import argparse
+  optparse = None
+except ImportError:
+  import optparse
+  argparse = None
 import random
 try:
   import yara
@@ -87,80 +92,88 @@ l2t_process.py [OPTIONS] -b CSV_FILE [DATE_RANGE]
 
 Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
 
-  arg_parser = argparse.ArgumentParser(description=usage)
+  if argparse:
+    arg_parser = argparse.ArgumentParser(description=usage)
+    arg_option = arg_parser.add_argument
+  else:
+    arg_parser = optparse.OptionParser(usage=usage)
+    arg_option = arg_parser.add_option
 
-  arg_parser.add_argument('-b', '--file', '--bodyfile', dest='filename',
-                          help='The input CSV file.', metavar='BODYFILE')
+  arg_option('-b', '--file', '--bodyfile', dest='filename',
+             help='The input CSV file.', metavar='BODYFILE')
 
-  arg_parser.add_argument('--bs', '--buffer-size', dest='buffer_size',
-                          help='The size of the buffer used for external sorting.',
-                          action='store')
+  arg_option('--bs', '--buffer-size', dest='buffer_size',
+             help='The size of the buffer used for external sorting.',
+             action='store')
 
-  arg_parser.add_argument('-d', '--debug', dest='debug',
-                          action='store_true', default=False,
-                          help='Turn on debug information.')
+  arg_option('-d', '--debug', dest='debug',
+             action='store_true', default=False,
+             help='Turn on debug information.')
 
-  arg_parser.add_argument('-t', '--tab', dest='tab', action='store_true',
-                          default=False, help='The input file is TAB delimited.')
+  arg_option('-t', '--tab', dest='tab', action='store_true',
+             default=False, help='The input file is TAB delimited.')
 
-  arg_parser.add_argument('-o', '--output', dest='output', action='store',
-                          metavar='FILE', help='The output file', default='STDOUT')
+  arg_option('-o', '--output', dest='output', action='store',
+             metavar='FILE', help='The output file', default='STDOUT')
 
-  arg_parser.add_argument('-w', '--whitelist', dest='whitelist', action='store',
-                          metavar='WHITELIST_FILE', default=None,
-                          help=('A file with keywords used to filter out content of'
-                                ' the timeline. If this option is used then no entry'
-                                ' will be included in the timeline except it matches'
-                                ' any of the keywords provided.'
-                                ' N.b. the keywords are compiled as regular expressions.'))
+  arg_option('-w', '--whitelist', dest='whitelist', action='store',
+             metavar='WHITELIST_FILE', default=None,
+             help=('A file with keywords used to filter out content of'
+                   ' the timeline. If this option is used then no entry'
+                   ' will be included in the timeline except it matches'
+                   ' any of the keywords provided.'
+                   ' N.b. the keywords are compiled as regular expressions.'))
 
-  arg_parser.add_argument('-k', '--blacklist', dest='blacklist', action='store',
-                          metavar='BLACKLIST_FILE', default=None,
-                          help=('A file with keywords used to filter out content of'
-                                ' the timeline. If this option is used then all entries'
-                                ' in the timeline will be filtered out if a match is found'
-                                ' here, that is if a match is found that entry will be '
-                                'left out of the final timeline, can be used in conjunction'
-                                ' with the whitelist to produce an even greater filter.'
-                                ' N.b. the keywords are compiled as regular expressions.'))
-
-  if yara:
-    arg_parser.add_argument('-y', '--yara-filter', dest='yara_filters', action='store',
-                            default=None, metavar='YARA_RULE_FILE',
-                            help=('Filter events out of the timeline based on whether or not'
-                                  ' a set of YARA rules triggers on the input module and description'
-                                  ' field of the CSV file. This is very similar functionality to the '
-                                  ' one provided by l2t_find_evil.py, however no information about '
-                                  ' which rule fired or why is provided, it is a simple filter.'
-                                  ' For more details use the --yara-rules to run the same rules '
-                                  'as a plugin against the timeline to get that information.'))
-
-  arg_parser.add_argument('--countsystem32', dest='countsystem32', action='store_true',
-                          default=False, help='Test plugin that does nothing of value.')
-
-  arg_parser.add_argument('--exe-in-temp', dest='exe_in_temp', action='store_true',
-                          default=False, help=('Plugin that prints out lines that contains '
-                                               'executables from a temp directory.'))
+  arg_option('-k', '--blacklist', dest='blacklist', action='store',
+             metavar='BLACKLIST_FILE', default=None,
+             help=('A file with keywords used to filter out content of'
+                   ' the timeline. If this option is used then all entries'
+                   ' in the timeline will be filtered out if a match is found'
+                   ' here, that is if a match is found that entry will be '
+                   'left out of the final timeline, can be used in conjunction'
+                   ' with the whitelist to produce an even greater filter.'
+                   ' N.b. the keywords are compiled as regular expressions.'))
 
   if yara:
-    arg_parser.add_argument('--yara-rules', dest='yara_rules', action='store',
-                            default=None, metavar='RULE_FILE',
-                            help=('Plugin that compares each line in the timeline against a set'
-                                  ' of YARA rules. This is the same functionality as is provided'
-                                  ' by l2t_find_evil.py.'))
+    arg_option('-y', '--yara-filter', dest='yara_filters', action='store',
+               default=None, metavar='YARA_RULE_FILE',
+               help=('Filter events out of the timeline based on whether or not'
+                     ' a set of YARA rules triggers on the input module and description'
+                     ' field of the CSV file. This is very similar functionality to the '
+                     ' one provided by l2t_find_evil.py, however no information about '
+                     ' which rule fired or why is provided, it is a simple filter.'
+                     ' For more details use the --yara-rules to run the same rules '
+                     'as a plugin against the timeline to get that information.'))
 
-  arg_parser.add_argument('-i', '--case-insensitive', dest='flag_case', action='store_true',
-                          default=False, help=('Make keyword searches case insensitive (by default'
+  arg_option('--countsystem32', dest='countsystem32', action='store_true',
+             default=False, help='Test plugin that does nothing of value.')
+
+  arg_option('--exe-in-temp', dest='exe_in_temp', action='store_true',
+             default=False, help=('Plugin that prints out lines that contains '
+                                  'executables from a temp directory.'))
+
+  if yara:
+    arg_option('--yara-rules', dest='yara_rules', action='store',
+                default=None, metavar='RULE_FILE',
+                help=('Plugin that compares each line in the timeline against a set'
+                      ' of YARA rules. This is the same functionality as is provided'
+                      ' by l2t_find_evil.py.'))
+
+  arg_option('-i', '--case-insensitive', dest='flag_case', action='store_true',
+             default=False, help=('Make keyword searches case insensitive (by default'
                                                ' it is case sensitive).'))
 
-  arg_parser.add_argument('--force', dest='force', action='store_true',
-                          default=False, help='Force the use of buffer sizes less than 60Mb.')
+  arg_option('--force', dest='force', action='store_true',
+             default=False, help='Force the use of buffer sizes less than 60Mb.')
 
-  arg_parser.add_argument('date_range', nargs='?', action='store', metavar='DATE_RANGE',
-                          default=None, help='Date filter, either MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY')
+  arg_option('date_range', nargs='?', action='store', metavar='DATE_RANGE',
+             default=None, help='Date filter, either MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY')
 
 
-  options = arg_parser.parse_args()
+  if argparse:
+    options = arg_parser.parse_args()
+  else:
+    options, _ = arg_parser.parse_args()
 
   if options.debug:
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)

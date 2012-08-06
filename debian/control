@@ -1,11 +1,12 @@
 Source: l2t-tools
 Section: python
 Priority: optional
-Build-Depends: debhelper (>= 7)
+Build-Depends: debhelper (>= 7), python-minimal (>= 2.6.6-3)
 Build-Depends-Indep: python
 Maintainer: Kristinn Gudjonsson <kristinn@log2timeline.net>
 Standards-Version: 3.8.4
 Homepage: http://code.google.com/p/l2t-tools
+X-Python-Version: >= 2.6
 
 Package: l2t-tools
 Architecture: all

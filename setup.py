@@ -28,6 +28,9 @@ import sys
 
 from distutils.core import setup
 
+if sys.version < '2.6':
+  print 'Wrong Python Version, require version 2.6 or higher.\n%s' % sys.version
+  sys.exit(1)
 
 def GetTools():
   """List up all scripts that should be runable from the command line."""
