@@ -174,6 +174,8 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     options, argv = arg_parser.parse_args()
     if len(argv) == 1:
       options.date_range = argv[0]
+    else:
+      options.date_range = None
 
 
   if options.debug:
