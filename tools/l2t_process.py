@@ -166,14 +166,15 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   arg_option('--force', dest='force', action='store_true',
              default=False, help='Force the use of buffer sizes less than 60Mb.')
 
-  arg_option('date_range', nargs='?', action='store', metavar='DATE_RANGE',
-             default=None, help='Date filter, either MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY')
-
-
   if argparse:
+    arg_option('date_range', nargs='?', action='store', metavar='DATE_RANGE',
+               default=None, help='Date filter, either MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY')
     options = arg_parser.parse_args()
   else:
-    options, _ = arg_parser.parse_args()
+    options, argv = arg_parser.parse_args()
+    if len(argv) == 1:
+      options.date_range = argv[0]
+
 
   if options.debug:
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
