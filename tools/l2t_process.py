@@ -43,6 +43,7 @@ import random
 try:
   import yara
 except ImportError:
+  logging.warning('Running tool without YARA support, please install YARA.')
   yara = None
 
 from l2t_tools.lib import l2t_sort
@@ -207,13 +208,14 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     plugins.append(count_system32.System32Count(separator))
   if options.exe_in_temp:
     plugins.append(temp_exe.WinExeInTemp(separator))
-  if options.yara_rules:
-    try:
-      plugins.append(yara_match.YaraMatch(separator, options.yara_rules))
-    except yara.SyntaxError as e:
-      logging.error('[ERROR] Faulty YARA rule file: %s'. e)
-    except IOError as e:
-      logging.error('[ERROR] YARA Rule file not found (%s)', e)
+  if yara:
+    if options.yara_rules:
+      try:
+        plugins.append(yara_match.YaraMatch(separator, options.yara_rules))
+      except yara.SyntaxError as e:
+        logging.error('[ERROR] Faulty YARA rule file: %s'. e)
+      except IOError as e:
+        logging.error('[ERROR] YARA Rule file not found (%s)', e)
 
   csv_filters = []
   if options.yara_filters:
