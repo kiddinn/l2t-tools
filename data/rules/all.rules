@@ -1,3 +1,2 @@
 include "/usr/local/yara/rules/basic.rules"
 include "/usr/local/yara/rules/simple.rules"
-include "/usr/local/yara/rules/malware.rules"
