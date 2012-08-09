@@ -221,7 +221,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     try:
       csv_filters.append(yara_filter.YaraFilter(separator, options.yara_filters))
     except yara.SyntaxError as e:
-      logging.error('[ERROR] Faulty YARA rule file: %s'. e)
+      logging.error('[ERROR] Faulty YARA rule file: %s', e)
     except IOError as e:
       logging.error('[ERROR] YARA Rule file not found (%s)', e)
 
