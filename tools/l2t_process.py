@@ -47,11 +47,11 @@ except ImportError:
   yara = None
 
 from l2t_tools.lib import l2t_sort
-if yara:
-  from l2t_tools.filters import yara_filter
 from l2t_tools.plugins import count_system32
 from l2t_tools.plugins import temp_exe
+
 if yara:
+  from l2t_tools.filters import yara_filter
   from l2t_tools.plugins import yara_match
 
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
@@ -208,17 +208,16 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     plugins.append(count_system32.System32Count(separator))
   if options.exe_in_temp:
     plugins.append(temp_exe.WinExeInTemp(separator))
-  if yara:
-    if options.yara_rules:
-      try:
-        plugins.append(yara_match.YaraMatch(separator, options.yara_rules))
-      except yara.SyntaxError as e:
-        logging.error('[ERROR] Faulty YARA rule file: %s'. e)
-      except IOError as e:
-        logging.error('[ERROR] YARA Rule file not found (%s)', e)
+  if yara and options.yara_rules:
+    try:
+      plugins.append(yara_match.YaraMatch(separator, options.yara_rules))
+    except yara.SyntaxError as e:
+      logging.error('[ERROR] Faulty YARA rule file: %s'. e)
+    except IOError as e:
+      logging.error('[ERROR] YARA Rule file not found (%s)', e)
 
   csv_filters = []
-  if options.yara_filters:
+  if yara and options.yara_filters:
     try:
       csv_filters.append(yara_filter.YaraFilter(separator, options.yara_filters))
     except yara.SyntaxError as e:
