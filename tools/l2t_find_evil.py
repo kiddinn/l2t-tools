@@ -31,11 +31,16 @@ This file is part of l2t-tools.
 """
 __author__ = 'kristinn@log2timeline.net (Kristinn Gudjonsson)'
 
-import argparse 
 import csv
 import os
 import sys
 import yara
+try:
+  import argparse
+  optparse = None
+except ImportError:
+  import optparse
+  argparse = None
 
 DEFAULT_RULE_DIR = '/usr/local/yara/rules'
 DEFAULT_RULE = 'all.rules'
@@ -97,25 +102,35 @@ if __name__ == '__main__':
            '%s assists you with quickly going over your timeline and automatically'
            ' scan for known interesting or "evil" entries within it.' % base)
 
+  if argparse:
+    arg_parser = argparse.ArgumentParser(description=usage)
+    arg_option = arg_parser.add_argument
+  else:
+    arg_parser = optparse.OptionParser(usage=usage)
+    arg_option = arg_parser.add_option
+
   arg_parser = argparse.ArgumentParser(description=usage)
 
-  arg_parser.add_argument('-f', '--file', '-t', '--timeline', dest='filename',
-                          action='store', metavar='FILE',
-                          help=('The path to the timeline that is to be'
-                                ' parsed.'))
-  arg_parser.add_argument('--tab', dest='tabfile', action='store_true',
-                          default=False,
-                          help='This is a tab delimited file, not a CSV one.')
-  arg_parser.add_argument('--macb', dest='macb', action='store_true',
-                          default=False,
-                          help=('We would like to include the MACB field in the '
-                                'evaluation field.'))
-  arg_parser.add_argument('-r', '--rule', dest='rulefile', action='store',
-                          default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
-                          metavar='RULE', help=('The path to the YARA'
-                                                ' extended rule file'
-                                                ' to compare against'))
-  options = arg_parser.parse_args()
+  arg_option('-f', '--file', '-t', '--timeline', dest='filename',
+             action='store', metavar='FILE',
+             help=('The path to the timeline that is to be'
+                   ' parsed.'))
+  arg_option('--tab', dest='tabfile', action='store_true',
+             default=False,
+             help='This is a tab delimited file, not a CSV one.')
+  arg_option('--macb', dest='macb', action='store_true',
+             default=False,
+             help=('We would like to include the MACB field in the '
+                   'evaluation field.'))
+  arg_option('-r', '--rule', dest='rulefile', action='store',
+             default='%s/%s' % (DEFAULT_RULE_DIR, DEFAULT_RULE),
+             metavar='RULE', help=('The path to the YARA'
+                                   ' extended rule file'
+                                   ' to compare against'))
+  if argparse:
+    options = arg_parser.parse_args()
+  else:
+    options, _ = arg_parser.parse_args()
 
   limiter = ','
   if options.tabfile:
