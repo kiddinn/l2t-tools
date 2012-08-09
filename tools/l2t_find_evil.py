@@ -109,8 +109,6 @@ if __name__ == '__main__':
     arg_parser = optparse.OptionParser(usage=usage)
     arg_option = arg_parser.add_option
 
-  arg_parser = argparse.ArgumentParser(description=usage)
-
   arg_option('-f', '--file', '-t', '--timeline', dest='filename',
              action='store', metavar='FILE',
              help=('The path to the timeline that is to be'
