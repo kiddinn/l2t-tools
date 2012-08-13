@@ -5,19 +5,17 @@ It does not contain any version information, more just prioritized points of int
 New features:
 
   l2t_process
+    Add the line duplication feature of the older tool.
+    Add the potential "timestomp" detection feature of the older version.
+    Add temporal proximity - include lines not only in hit (keywords) but also in temporal proximity (+- 5 min or adjustable, or X entries)
+    Add the keyword itself that was matched on and put it in the notes field (change the entry)
     Add threading:
       Create a queue that is passed to the merge algorithm, all lines appended to queue.
       Create a single thread for watching the queue.
       Create a thread for each plugin that is being run.
       When an event hits the queue, send the line to each of the plugin threads that are running.
         - Small issues came up during initial implementation, take a closer look at the possibilities.
-    Add temporal proximity - include lines not only in hit (keywords) but also in temporal proximity (+- 5 min or adjustable, or X entries)
-    Add the potential "timestomp" detection feature of the older version.
-    Plugin: Convert the l2t_find_evil into a plugin.
-      Done with a matching plugin.
-      Need to write a filter plugin too.
     Plugin: Create a Mathplotlib module/plugin to draw/calculate scatter plots and do that automatically (that is the drawing)
-    Add the keyword itself that was matched on and put it in the notes field (change the entry)
 
 Stuff missing:
   Unit tests, unit tests and unit tests... ohh did I mention unit tests?
