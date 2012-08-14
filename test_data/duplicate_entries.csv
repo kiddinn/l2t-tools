@@ -1,0 +1,6 @@
+06/10/2012,00:30:22,UTC,MACB,FILE,SomeFS,All in One,-,myhost,/some/file/here/temp/asdf.exe,/some/file/here/temp/asdf.exe,2,/some/file/here/temp/asdf.exe,1234,-,Log2t::input::mft,-
+06/02/2012,01:20:22,UTC,ACB,FILE,SomeFS,File Accessed/Created,-,myhost,/some/file/here/temp/mysubdir/asdf.exe,/some/file/here/temp/mysubdir/asdf.exe,2,/some/file/here/temp/mysubdir/asdf.exe,4123,-,Log2t::input::mft,-
+06/02/2012,01:20:22,UTC,ACB,FILE,SomeFS,File Accessed/Created,-,myhost,/some/file/here/temp/mysubdir/asdf.exe,/some/file/here/temp/mysubdir/asdf.exe,2,/some/file/here/temp/mysubdir/asdf.exe,4123,-,Log2t::input::mft,-
+06/18/2012,00:30:22,UTC,CB,LOG,Linux Syslog Log File,Entry written,-,myhost,Facility: syslog[123],[syslog(123)] some event occured that required my attention.,2,/var/log/messages,8123,-,Log2t::input::syslog,-
+06/29/2012,09:13:57,UTC,MACB,LOG,Linux Syslog Log File,Entry written,-,myhost,Facility: myreportingprocess[140],myreportingprocess[140]] I am reporting an event, need response or at last a hug.,2,/var/log/messages,8123,-,Log2t::input::syslog,-
+06/18/2012,00:30:22,UTC,CB,LOG,Linux Syslog Log File,Entry written,-,myhost,Facility: syslog[123],[syslog(123)] some event occured that required my attention.,2,/var/log/syslog,8195,-,Log2t::input::syslog,-

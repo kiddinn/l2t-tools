@@ -68,14 +68,22 @@ class L2TLine(object):
   def AddFile(self, filename, inode):
     """Add a file and inode to the filename list."""
     if type(filename) == str:
-      self.filenames.append(filename)
+      if filename not in self.filenames:
+        self.filenames.append(filename)
     else:
-      self.filenames.extend(filename)
+      for f in filename:
+        if f not in self.filenames:
+          self.filenames.append(f)
 
     if type(inode) == list:
-      self.inodes.extend(inode)
+      for i in inode:
+        i = str(i)
+        if i not in self.inodes:
+          self.inodes.append(i)
     else:
-      self.inodes.append(str(inode))
+      i = str(inode)
+      if i not in self.inodes:
+        self.inodes.append(i)
 
   def __str__(self):
     """Return the line in a string format."""
@@ -109,6 +117,7 @@ class L2tContainer(object):
   def __init__(self):
     self.lines = []
     self.timestamp = 0
+    self._first_new_line = None
 
   def AddLine(self, timestamp, new_line):
     """Check timestamps values."""
@@ -116,6 +125,7 @@ class L2tContainer(object):
       self.timestamp = timestamp
 
     if timestamp != self.timestamp:
+      self._first_new_line = L2TLine(timestamp, new_line)
       raise WrongTimestamp('Timestamps changed.')
 
     # Need to check duplication.
@@ -127,12 +137,27 @@ class L2tContainer(object):
 
     self.lines.append(line_in)
 
+  def __iter__(self):
+    for line in self.lines:
+      yield line
+
+  def __exit__(self, unused_type, unused_value, unused_traceback):
+    """Make usable with "with" statement."""
+    self.CloseContainer()
+
+  def __enter__(self):
+    """Make usable with "with" statement."""
+    return self
+
   def FlushContainer(self):
     """Generator."""
     for line in self.lines:
       yield line
 
     self.CloseContainer()
+    if self._first_new_line:
+      self.lines.append(self._first_new_line)
+      self._first_new_line = None
 
   def __len__(self):
     return len(self.lines)

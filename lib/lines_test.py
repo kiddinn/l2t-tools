@@ -87,6 +87,9 @@ Log2t::input::syslog,-""")
     self.assertFalse(line1 == line2)
     self.assertTrue(line1 == line3)
 
+    # Append a filename that is already there (should remain the same).
+    line1.AddFile('othersyslog', 128)
+    self.assertEquals(str(line1), self.line_should_be)
 
   def testContainer(self):
     """Test L2tContainer with various operations against it."""

@@ -88,6 +88,21 @@ class L2tLibTest(unittest.TestCase):
     #in_file_str, flags):
     self.assertEquals(1, 1)
 
+  def testDuplicateLines(self):
+    """Test the duplicate line detection using both simple and complex mechanism."""
+    file_path = os.path.join(self._base, 'duplicate_entries.csv')
+    # File contains 6 lines in total.
+    #   2 of which are exact copies.
+    #   2 of which are near copies.
+    # Simple collection should return 5 lines.
+    # Standard collection should return 4 lines.
+    fh = open(file_path, 'rb')
+    l2t_sort.ExternalSplit(fh, self._random, (None, None), [], []. 0)
+    # Use with to create temporary folder, finish the split
+    # Call the merge, and store results in a buffer.
+    # Check the length of the buffer.
+
+
   def tearDown(self):
     self._fh.close()
     for f in l2t_sort.GetListOfFiles(self._random):

@@ -24,6 +24,8 @@ import os
 import re
 import heapq
 
+from l2t_tools.lib import lines
+
 __author__ = 'Kristinn Gudjonsson (kristinn@log2timeline.net)'
 __version__ = '0.1'
 
@@ -74,6 +76,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size
   logging.debug('[ExternalSplit] Flushing last buffer.')
   FlushBuffer(temp_buffer, counter, temp_name)
 
+
 def FlushBuffer(buf, count, temp):
   """Write a buffer to file.
   
@@ -89,6 +92,7 @@ def FlushBuffer(buf, count, temp):
     fh.write('%s,%s' % (line[0], line[1]))
 
   fh.close()
+
 
 def FilterOut(test, date_filters, content_filters={}, plugin_filters=[]):
   """A simple method to filter out lines based on their date/content.
@@ -143,7 +147,8 @@ def FilterOut(test, date_filters, content_filters={}, plugin_filters=[]):
 
   return False
 
-def ExternalMergeSort(in_file_str, out_file, plugins):
+
+def ExternalMergeSort(in_file_str, out_file, plugins, simple=False):
   """External merge algorithm.
 
   This is an implementation of a sort-merge algorithm. It takes multiple
@@ -162,9 +167,15 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
     in_file_str: The input file structure.
     out_file: Filehandle to the output file.
     plugins: A list of plugins to run against the input.
+    simple: Boolean value determining if we want a simple quick test against
+    duplicate lines or a more comprehensive test using a container.
   """
   lowest = []
-  last_line = []
+  if simple:
+    container = []
+  else:
+    container = lines.L2tContainer()
+
   count_duplicates = 0
 
   for fn in GetListOfFiles(in_file_str):
@@ -187,16 +198,17 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
         logging.debug('Appended: %d', int(line[0:14]))
       except ValueError:
         logging.warning('Unable to parse the timestamp: %s' % line[0:14])
-    
+
   if len(lowest) == 1:
     entry = heapq.heappop(lowest)
-    count_duplicates, last_line = ProcessLine((entry[0], entry[1]), None, out_file, count_duplicates, plugins)
+    count_duplicates, container = ProcessLine((entry[0], entry[1]), container, out_file,
+                                              count_duplicates, plugins)
     for line in entry[2]:
-      count_duplicates, last_line = ProcessLine((line[0:14], line[15:]), last_line, out_file, count_duplicates, plugins)
+      count_duplicates, container = ProcessLine((line[0:14], line[15:]), container, out_file, count_duplicates, plugins)
 
   while len(lowest) > 0:
     entry = heapq.heappop(lowest)
-    count_duplicates, last_line = ProcessLine((entry[0], entry[1]), last_line, out_file, count_duplicates, plugins)
+    count_duplicates, container = ProcessLine((entry[0], entry[1]), container, out_file, count_duplicates, plugins)
     line = entry[2].readline()
     if line:
       try:
@@ -207,25 +219,51 @@ def ExternalMergeSort(in_file_str, out_file, plugins):
   logging.info('Duplicates removed: %d', count_duplicates)
   out_file.close()
 
-def ProcessLine(new_line, last_line, output, duplicates, plugins):
+
+def ProcessLine(new_line, container, output, duplicates, plugins):
   """Check if line is a duplicate, run through plugins and return duplicate count and last_line."""
-  if not IsADuplicate(new_line, last_line):
+  if type(container) == list:
+    # Simple check.
+    if IsADuplicate(new_line, container):
+      duplicate += 1
+      return duplicates, new_line
+
     output.write('%s' % new_line[1])
     for plugin in plugins:
       plugin.AppendLine(new_line)
-  else:
+    return duplicates, new_line
+
+  # We have a container.
+  try:
+    container.AddLine(new_line[0], new_line[1])
+  except lines.WrongTimestamp:
+    for line in container.FlushContainer():
+      output.write('%s' % line)
+      for plugin in plugins:
+        plugin.AppendLine(str(line))
+  except lines.DuplicateLine:
     duplicates += 1
 
-  return duplicates, new_line
+  return duplicates, container
 
-def IsADuplicate(line_a, line_b):
-  """Indicate whether or not two lines are duplicates of one another."""
-  if not line_b:
+
+def IsADuplicate(line_cur, line_last):
+  """Indicate whether or not two lines are duplicates of one another.
+
+  Args:
+    line_cur: A list with two entries, timestamp and the original entry.
+    line_last: A list with two entries representing the last line that was
+    written out. The list contains a timestamp and the original entry.
+
+  Returns:
+    A boolean indicating whether or not an entry is a duplicate.
+  """
+  if not line_last:
     return False
 
   try:
-    if line_a[0] == line_b[0]:
-      if line_a[1] == line_b[1]:
+    if line_cur[0] == line_last[0]:
+      if line_cur[1] == line_last[1]:
         logging.debug('Skipped a line due to a duplicate.')
         return True
   except IndexError:
@@ -233,12 +271,14 @@ def IsADuplicate(line_a, line_b):
 
   return False 
 
+
 def GetListOfFiles(in_file_str):
   """Return all filenames that match the pattern given."""
   path = os.path.dirname(in_file_str) or '.'
   for fn in os.listdir(path):
     if in_file_str in fn:
       yield fn
+
 
 def BuildKeywordList(in_file_str, flags):
   """Return a list of compiled re objects that can be used for keyword matching."""

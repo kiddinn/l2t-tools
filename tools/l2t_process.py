@@ -149,6 +149,12 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   arg_option('--countsystem32', dest='countsystem32', action='store_true',
              default=False, help='Test plugin that does nothing of value.')
 
+  arg_option('-q', '--quick', dest='simple_check', action='store_true',
+             default=False, help=('Quick mode, does not look into line content to detect'
+                                  ' duplicates. This means the tool will run faster, yet'
+                                  ' potentially contain duplicate records where filename is'
+                                  ' different while all other fields are the same.'))
+
   arg_option('--exe-in-temp', dest='exe_in_temp', action='store_true',
              default=False, help=('Plugin that prints out lines that contains '
                                   'executables from a temp directory.'))
@@ -295,7 +301,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     try:
       l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high),
                              content_filters, csv_filters, buffer_use_size)
-      l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins)
+      l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins, options.simple_check)
     except KeyboardInterrupt:
       logging.warning('Process killed, cleaning up.')
 
