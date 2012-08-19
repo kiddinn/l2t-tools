@@ -97,7 +97,7 @@ class L2tLibTest(unittest.TestCase):
     # Simple collection should return 5 lines.
     # Standard collection should return 4 lines.
     fh = open(file_path, 'rb')
-    l2t_sort.ExternalSplit(fh, self._random, (None, None), [], []. 0)
+    l2t_sort.ExternalSplit(fh, self._random, (None, None), [], [], 0)
     # Use with to create temporary folder, finish the split
     # Call the merge, and store results in a buffer.
     # Check the length of the buffer.

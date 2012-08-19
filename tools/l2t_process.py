@@ -318,6 +318,11 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
       logging.warning('Process killed, cleaning up.')
       if options.debug:
         pdb.post_mortem()
+    except:
+      err_type, err_value, err_traceback = sys.exc_info()
+      logging.error('Error occurred (%s): %s', err_type, err_value)
+      if options.debug:
+        pdb.post_mortem(err_traceback)
 
     # Run through the results from the plugins:
     for plugin in plugins:

@@ -172,7 +172,7 @@ def ExternalMergeSort(in_file_str, out_file, plugins, simple=False):
   """
   lowest = []
   if simple:
-    container = []
+    container = ()
   else:
     container = lines.L2tContainer()
 
@@ -222,10 +222,10 @@ def ExternalMergeSort(in_file_str, out_file, plugins, simple=False):
 
 def ProcessLine(new_line, container, output, duplicates, plugins):
   """Check if line is a duplicate, run through plugins and return duplicate count and last_line."""
-  if type(container) == list:
+  if type(container) == tuple:
     # Simple check.
     if IsADuplicate(new_line, container):
-      duplicate += 1
+      duplicates += 1
       return duplicates, new_line
 
     output.write('%s' % new_line[1])
