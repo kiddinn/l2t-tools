@@ -165,21 +165,3 @@ class L2tContainer(object):
   def CloseContainer(self):
     self.timestamp = 0
     self.lines = []
-
-
-"""
-Leid til ad taka a duplicate.
-
-ProcessLine
-  Bera saman tima vid buffer
-    b) ekki sami timi, flush buffer.
-try:
-  container.AddLine(line)
-except WrongTimestamp:
-  container.FlushLines()
-  container.AddLine(line)
-
-e-d thannig.
-
-"""
-
