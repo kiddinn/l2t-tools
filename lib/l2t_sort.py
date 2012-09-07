@@ -19,6 +19,7 @@ This file is part of l2t-tools.
     You should have received a copy of the GNU General Public License
     along with log2timeline.  If not, see <http://www.gnu.org/licenses/>.
 """
+import pdb
 import logging
 import os
 import re
@@ -60,7 +61,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size
     try:
       date_and_time = int(date_and_time_str)
     except ValueError as e:
-      logging.warning('[Split] Unable to parse line (%s): Error msg: %s', line, e)
+      logging.warning('Unable to parse line (%s): Error msg: %s', line, e)
       continue
     a_list = (date_and_time, line)
     if not FilterOut(a_list, dfilters, cfilters, pfilters):
@@ -68,12 +69,12 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size
       check_size += len(line)
 
     if buffer_size and (check_size >= buffer_size):
-      logging.debug('[ExternalSplit] Flushing, bufsize: %d, and check_size: %d', buffer_size, check_size)
+      logging.debug('Flushing, bufsize: %d, and check_size: %d', buffer_size, check_size)
       FlushBuffer(temp_buffer, counter, temp_name)
       temp_buffer = []
       check_size = 0
       counter += 1
-  logging.debug('[ExternalSplit] Flushing last buffer.')
+  logging.debug('Flushing last buffer.')
   FlushBuffer(temp_buffer, counter, temp_name)
 
 
@@ -237,14 +238,18 @@ def ProcessLine(new_line, container, output, duplicates, plugins):
   try:
     container.AddLine(new_line[0], new_line[1])
   except lines.WrongTimestamp:
+    logging.debug('WrongTimestamp: flushing buffer of size: %d [%d]', len(container), container.timestamp)
     for line in container.FlushContainer():
       output.write('%s' % line)
       for plugin in plugins:
         plugin.AppendLine(str(line))
   except lines.DuplicateLine:
+    logging.debug('Duplicate line found, current count: %d', duplicates)
+    if 'TEM,1671,-,Log2t:' in new_line[1]:
+      pdb.set_trace()
     duplicates += 1
-
-  return duplicates, container
+  finally:
+    return duplicates, container
 
 
 def IsADuplicate(line_cur, line_last):

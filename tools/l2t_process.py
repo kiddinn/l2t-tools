@@ -70,7 +70,7 @@ L2T_RE = re.compile(('^date,time,timezone,MACB,source,sourcetype,type,user,host,
 L2T_TAB_RE = re.compile(('^date\ttime\ttimezone\tMACB\tsource\tsourcetype\ttype\tuser\thost\t'
                          'short\tdesc\tversion\tfilename\tinode\tnotes\tformat\textra$'))
 
-LOG_FORMAT = '[%(levelname)s - %(module)s] %(message)s'
+LOG_FORMAT = '[%(levelname)s - %(module)s] <%(funcName)s> %(message)s'
 
 
 def IsL2tCsv(filehandle, sep, out):
@@ -97,9 +97,11 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
   if argparse:
     arg_parser = argparse.ArgumentParser(description=usage)
     arg_option = arg_parser.add_argument
+    suppress = argparse.SUPPRESS
   else:
     arg_parser = optparse.OptionParser(usage=usage)
     arg_option = arg_parser.add_option
+    suppress = optparse.SUPPRESS_HELP
 
   arg_option('-b', '--file', '--bodyfile', dest='filename',
              help='The input CSV file.', metavar='BODYFILE')
@@ -146,6 +148,9 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
                      ' which rule fired or why is provided, it is a simple filter.'
                      ' For more details use the --yara-rules to run the same rules '
                      'as a plugin against the timeline to get that information.'))
+
+  arg_option('--aflusunarhamur', '--hamur', dest='debug_mode', action='store_true',
+             default=False, help=suppress)
 
   arg_option('--countsystem32', dest='countsystem32', action='store_true',
              default=False, help='Test plugin that does nothing of value.')
@@ -196,15 +201,17 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     else:
       options.date_range = None
 
+  if options.debug_mode:
+    options.debug = True
 
   if options.debug:
     logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
-    logging.debug('[l2t_process] Turning debug on.')
+    logging.debug('Turning debug on.')
   else:
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
   if not options.filename:
-    logging.error('[l2t_process] Must provide a filename.')
+    logging.error('Must provide a filename.')
     sys.exit(1)
 
   if not os.path.isfile(options.filename):
@@ -297,9 +304,9 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     if os.stat(options.filename).st_size < buffer_use_size:
       buffer_use_size = 0
 
-    logging.debug('[L2t_process] Using buffer size: %d bytes', buffer_use_size)
+    logging.debug('Using buffer size: %d bytes', buffer_use_size)
     temp_output_name = 'l2t_sort_temp_%05d' % random.randint(1,10000)
-    logging.debug('[l2t_process] Using <%s> as base name for temporary output files.', temp_output_name)
+    logging.debug('Using <%s> as base name for temporary output files.', temp_output_name)
 
     content_filters = {}
     if options.blacklist:
@@ -315,20 +322,21 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
                              content_filters, csv_filters, buffer_use_size)
       l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins, options.simple_check)
     except KeyboardInterrupt:
-      logging.warning('Process killed, cleaning up.')
-      if options.debug:
+      logging.warning('Attempt to kill process, cleaning up.')
+      if options.debug_mode:
         pdb.post_mortem()
     except:
       err_type, err_value, err_traceback = sys.exc_info()
       logging.error('Error occurred (%s): %s', err_type, err_value)
-      if options.debug:
+      if options.debug_mode:
         pdb.post_mortem(err_traceback)
+    finally:
+      logging.debug('Cleaning up.')
+      # Run through the results from the plugins:
+      for plugin in plugins:
+        logging.info('%s', plugin.Report())
 
-    # Run through the results from the plugins:
-    for plugin in plugins:
-      logging.info('%s', plugin.Report())
-
-    # Delete temp files
-    for name in l2t_sort.GetListOfFiles(temp_output_name):
-      os.remove(name)
+      # Delete temp files
+      for name in l2t_sort.GetListOfFiles(temp_output_name):
+        os.remove(name)
 

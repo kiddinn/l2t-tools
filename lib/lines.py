@@ -96,6 +96,10 @@ class L2TLine(object):
     if self.timestamp != other.timestamp:
       return False
 
+    # EXIF information is limited, so this groups too many entries together.
+    if self.source_long == 'EXIF metadata':
+      return False
+
     if self.macb != other.macb:
       return False
 
@@ -132,7 +136,9 @@ class L2tContainer(object):
     line_in = L2TLine(timestamp, new_line)
     for line in self.lines:
       if line == line_in:
+        logging.debug('=+' * 45)
         line.AddFile(line_in.filenames, line_in.inodes)
+        logging.debug('Duplicate line detected:\n%s\nvs.\n%s\n--- --- --- --- ---', line, line_in)
         raise DuplicateLine('Found a duplicate.')
 
     self.lines.append(line_in)

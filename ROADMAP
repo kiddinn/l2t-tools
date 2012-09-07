@@ -6,6 +6,7 @@ New features:
 
   l2t_process
     Add the line duplication feature of the older tool.
+    Add support for the JSON serialized output
     Add the potential "timestomp" detection feature of the older version.
     Add temporal proximity - include lines not only in hit (keywords) but also in temporal proximity (+- 5 min or adjustable, or X entries)
     Add the keyword itself that was matched on and put it in the notes field (change the entry)
