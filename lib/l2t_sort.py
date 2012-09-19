@@ -83,7 +83,7 @@ def GetUnicodeString(string):
   if type(string) == unicode:
     return string
 
-  return str(string).encode('utf-8', 'ignore')
+  return str(string).decode('utf-8', 'ignore')
 
 
 def FlushBuffer(buf, count, temp):
@@ -98,7 +98,8 @@ def FlushBuffer(buf, count, temp):
   fh = open('%s.%05d' % (temp, count), 'wb')
 
   for line in sorted(buf, key=lambda x: x[0]):
-    fh.write(','.join(map(GetUnicodeString,line)).decode('utf-8'))
+    out_str = u'%s,%s' % (line[0], GetUnicodeString(line[1]))
+    fh.write(out_str.encode('utf-8'))
 
   fh.close()
 
