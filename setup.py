@@ -26,8 +26,8 @@ import glob
 import os
 import sys
 
-from setuptools import setup
-#from distutils.core import setup
+#from setuptools import setup
+from distutils.core import setup
 
 if sys.version < '2.6':
   print 'Wrong Python Version, require version 2.6 or higher.\n%s' % sys.version
@@ -70,7 +70,7 @@ setup(name='L2t Tools',
           'Operating System :: OS Independent',
           'Programming Language :: Python',
       ],
-      include_package_data=True,
+      #include_package_data=True,
       packages=['l2t_tools',
                 'l2t_tools.lib',
                 'l2t_tools.plugins',
