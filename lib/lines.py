@@ -71,6 +71,7 @@ class L2TLine(object):
       if filename not in self.filenames:
         self.filenames.append(filename)
     else:
+      self.filenames.extend(filename)
       for f in filename:
         if f not in self.filenames:
           self.filenames.append(f)

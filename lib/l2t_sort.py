@@ -52,6 +52,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size
 
   logging.debug('Buffer size: %d', buffer_size)
   temp_buffer = []
+  temp_append = temp_buffer.append
   for line in sortfile:
     # Should be YYYYMMDDHHMMSS
     # That is we are creating an int that can be used for quick sorting based
@@ -65,7 +66,7 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size
       continue
     a_list = (date_and_time, line)
     if not FilterOut(a_list, dfilters, cfilters, pfilters):
-      temp_buffer.append(a_list)
+      temp_append(a_list)
       check_size += len(line)
 
     if buffer_size and (check_size >= buffer_size):
@@ -76,6 +77,13 @@ def ExternalSplit(sortfile, temp_name, dfilters, cfilters, pfilters, buffer_size
       counter += 1
   logging.debug('Flushing last buffer.')
   FlushBuffer(temp_buffer, counter, temp_name)
+
+
+def GetUnicodeString(string):
+  if type(string) == unicode:
+    return string
+
+  return str(string).encode('utf-8', 'ignore')
 
 
 def FlushBuffer(buf, count, temp):
@@ -90,7 +98,7 @@ def FlushBuffer(buf, count, temp):
   fh = open('%s.%05d' % (temp, count), 'wb')
 
   for line in sorted(buf, key=lambda x: x[0]):
-    fh.write('%s,%s' % (line[0], line[1]))
+    fh.write(','.join(map(GetUnicodeString,line)).decode('utf-8'))
 
   fh.close()
 

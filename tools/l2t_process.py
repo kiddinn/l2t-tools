@@ -161,16 +161,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
                                  ' potentially contain duplicate records where filename is'
                                  ' different while all other fields are the same.'))
 
-  arg_option('-s', '--slow', dest='simple_check', action='store_false',
-             help=('Slow mode: Examines each line to detect potential near duplicate '
-                   'entries, storing a short output buffer for duplicate detection. '
-                   'This mode stores each line as an object that can be used for '
-                   'duplicate detection, which is at the same time a lot slower '
-                   'method than the simple complete duplicate detection that is used'
-                   ' by default. This mode however detects lines that are duplicate '
-                   'entries yet not a complete duplicate (same entry in a different file'
-                   ' for instance). So this is a more accurate run of the tool, just '
-                   'considerably slower (at least for now).'))
+  arg_option('-s', '--slow', dest='simple_check', action='store_false', help=suppress)
 
   arg_option('--exe-in-temp', dest='exe_in_temp', action='store_true',
              default=False, help=('Plugin that prints out lines that contains '
@@ -320,6 +311,7 @@ Where DATE_RANGE is MM-DD-YYYY or MM-DD-YYYY..MM-DD-YYYY"""
     try:
       l2t_sort.ExternalSplit(f, temp_output_name, (date_filter_low, date_filter_high),
                              content_filters, csv_filters, buffer_use_size)
+      
       l2t_sort.ExternalMergeSort(temp_output_name, output_file, plugins, options.simple_check)
     except KeyboardInterrupt:
       logging.warning('Attempt to kill process, cleaning up.')
